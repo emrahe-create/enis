@@ -1,0 +1,45 @@
+{
+  "appName": "enis",
+  "ownerCompany": "EQ Bilişim",
+  "voice": {
+    "positioning": "supportive but neutral",
+    "avoid": [
+      "claims of personal relationship roles",
+      "claims of professional care roles",
+      "claims of replacing human connection",
+      "need-based attachment language"
+    ]
+  },
+  "tagline": {
+    "en": "Say what’s on your mind.",
+    "tr": "İçinden geçenleri söyle."
+  },
+  "onboarding": [
+    {
+      "en": "Say what’s on your mind.",
+      "tr": "İçinden geçenleri söyle."
+    },
+    {
+      "en": "There’s no pressure here.",
+      "tr": "Burada bir zorunluluk yok."
+    },
+    {
+      "en": "You can start anytime.",
+      "tr": "Ne zaman istersen başlayabilirsin."
+    }
+  ],
+  "cta": {
+    "start": {
+      "en": "Start",
+      "tr": "Başla"
+    },
+    "login": {
+      "en": "I already have an account",
+      "tr": "Zaten hesabım var"
+    }
+  },
+  "disclaimer": {
+    "en": "Enis is an AI wellness companion, not therapy, diagnosis, or treatment.",
+    "tr": "Enis bir yapay zeka iyi oluş eşlikçisidir; terapi, tanı ya da tedavi değildir."
+  }
+}

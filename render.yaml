@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: enis-backend
+    runtime: node
+    buildCommand: npm install && npm run db:migrate
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PREMIUM_PRICE_ID
+        sync: false
+      - key: APP_BASE_URL
+        value: https://api.enisapp.com
+      - key: FREE_DAILY_CHAT_LIMIT
+        value: 10

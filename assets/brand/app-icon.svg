@@ -1,0 +1,13 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">enis app icon</title>
+  <desc id="desc">Rounded square gradient app icon with a white smooth continuous closed conversation-flow loop mark.</desc>
+  <defs>
+    <linearGradient id="enisIconGradient" x1="104" y1="84" x2="920" y2="940" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7CB7FF"/>
+      <stop offset="0.48" stop-color="#5D8CFF"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="252" fill="url(#enisIconGradient)"/>
+  <path d="M704 354C628 286 500 286 402 358C292 439 292 594 395 686C505 784 686 744 760 616C826 503 760 369 636 358C511 347 400 444 401 558C402 659 506 720 606 682C696 648 735 552 694 480C653 408 546 400 489 464C437 524 455 618 528 655C590 686 674 654 701 581" stroke="#FFFFFF" stroke-width="84" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
