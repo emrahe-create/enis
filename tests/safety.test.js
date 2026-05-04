@@ -18,6 +18,16 @@ test("detects crisis language", () => {
   assert.ok(risk.categories.includes("crisis"));
 });
 
+test("detects abuse and severe distress language", () => {
+  const abuse = detectSafetyRisk("Evde şiddet görüyorum ve güvende değilim.");
+  const severe = detectSafetyRisk("Nefes alamıyorum, kontrolümü kaybediyorum.");
+
+  assert.equal(abuse.triggered, true);
+  assert.ok(abuse.categories.includes("abuse"));
+  assert.equal(severe.triggered, true);
+  assert.ok(severe.categories.includes("severe_distress"));
+});
+
 test("does not trigger on ordinary emotional support language", () => {
   const risk = detectSafetyRisk("I feel stressed and sad after a hard day.");
 
@@ -33,10 +43,10 @@ test("safety response points to external help and does not continue AI chat", ()
     categories: ["self_harm"]
   });
 
-  assert.match(response.message, /Safety warning/);
-  assert.match(response.message, /emergency services/);
-  assert.match(response.message, /988/);
+  assert.match(response.message, /Bu biraz ağır görünüyor/);
+  assert.match(response.message, /Güvendiğin biriyle/);
+  assert.doesNotMatch(response.message, /policy/i);
   assert.doesNotMatch(response.message, new RegExp("ther" + "apist", "i"));
   assert.equal(response.canContinueAiChat, false);
-  assert.ok(response.resources.some((resource) => resource.url === "https://988lifeline.org"));
+  assert.ok(response.resources.some((resource) => resource.action.includes("112")));
 });

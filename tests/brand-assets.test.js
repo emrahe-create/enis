@@ -15,11 +15,14 @@ function readBrandTextFiles() {
     brandSourceFile,
     path.join(brandAssetDir, "copy.json"),
     path.join(brandAssetDir, "colors.json"),
-    path.join(brandAssetDir, "logo-enis.svg"),
-    path.join(brandAssetDir, "app-icon.svg")
+    path.join(brandAssetDir, "logo-enis.svg")
   ]
     .map((filePath) => fs.readFileSync(filePath, "utf8"))
     .join("\n");
+}
+
+function isPng(buffer) {
+  return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
 }
 
 test("brand copy contains English and Turkish taglines", () => {
@@ -67,20 +70,15 @@ test("brand voice stays supportive and neutral", () => {
 
 test("logo and app icon use lowercase enis direction", () => {
   const logo = fs.readFileSync(path.join(brandAssetDir, "logo-enis.svg"), "utf8");
-  const appIcon = fs.readFileSync(path.join(brandAssetDir, "app-icon.svg"), "utf8");
+  const appIcon = fs.readFileSync(path.join(brandAssetDir, "app-icon.png"));
+  const pngLogo = fs.readFileSync(path.join(brandAssetDir, "logo-enis.png"));
 
   assert.match(logo, />enis</);
   assert.match(logo, /#5D8CFF/);
   assert.match(logo, /#C084FC/);
   assert.match(logo, /conversation-flow loop mark/);
-  assert.match(appIcon, /#FFFFFF/);
-  assert.match(appIcon, /rx="252"/);
-  assert.match(appIcon, /conversation-flow loop mark/);
-  assert.match(appIcon, /smooth continuous/);
-  assert.match(appIcon, /closed/);
-  assert.match(appIcon, /stroke-width="84"/);
-  assert.match(appIcon, /stroke-linejoin="round"/);
-  assert.equal((appIcon.match(/<path\b/g) || []).length, 1);
-  assert.equal(/opacity=/.test(appIcon), false);
-  assert.equal(/<text/i.test(appIcon), false);
+  assert.equal(enisBrand.assets.logo, "/assets/brand/logo-enis.png");
+  assert.equal(enisBrand.assets.appIcon, "/assets/brand/app-icon.png");
+  assert.equal(isPng(appIcon), true);
+  assert.equal(isPng(pngLogo), true);
 });

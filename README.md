@@ -5,7 +5,7 @@ Express + PostgreSQL backend for a mobile AI wellness platform.
 ## Features
 
 - Email/password auth with JWT
-- Forgot password and email verification placeholders
+- Forgot password placeholder and DB-backed email verification flow
 - Account deletion and personal data export endpoints
 - Free subscription plus 15-day premium trial
 - AI emotional support chat with OpenAI integration
@@ -71,11 +71,14 @@ Set these in `.env`:
 - `JWT_EXPIRES_IN`: JWT lifetime, for example `7d`
 - `OPENAI_API_KEY`: enables AI chat and emotion analysis
 - `OPENAI_MODEL`: OpenAI chat model, defaults to `gpt-4o-mini`
+- `EMAIL_PROVIDER`: `smtp` or `resend`; defaults to `smtp`
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`: SMTP verification email settings
+- `EMAIL_FROM`: sender address for verification emails
 - `STRIPE_SECRET_KEY`: enables Stripe checkout
 - `STRIPE_WEBHOOK_SECRET`: validates Stripe webhooks
 - `STRIPE_PREMIUM_PRICE_ID`: Stripe recurring price for premium
-- `APP_BASE_URL`: public backend URL, for example `https://api.enisapp.com`
-- `FREE_DAILY_CHAT_LIMIT`: rolling 24-hour chat limit for non-premium users after trial/free access
+- `APP_BASE_URL`: public app URL for email verification and checkout links, for example `https://enisapp.com`
+- `FREE_DAILY_CHAT_LIMIT`: rolling 24-hour chat limit for non-premium users after trial/free access, default `30`
 - `PORT`: provided by Render in production; local default is `4000`
 
 Without `OPENAI_API_KEY`, chat and emotion analysis use deterministic local fallback responses so the API can still be tested.
@@ -115,7 +118,7 @@ Name: api
 Value: <Render service domain>
 ```
 
-After DNS is active, set `APP_BASE_URL=https://api.enisapp.com`.
+After DNS is active, set `APP_BASE_URL=https://enisapp.com` for app-facing email verification and checkout links.
 
 ## API Overview
 
@@ -129,6 +132,8 @@ After DNS is active, set `APP_BASE_URL=https://api.enisapp.com`.
 - `POST /api/auth/login`
 - `POST /api/auth/forgot-password`
 - `POST /api/auth/email-verification`
+- `POST /api/auth/resend-verification`
+- `GET /api/auth/verify-email?token=...`
 
 Signup requires mandatory consent acceptance:
 
@@ -290,7 +295,7 @@ Premium response:
 
 The AI support layer avoids labels, certainty claims, scores, percentages, strict commands, and care-plan language. It keeps the tone supportive, brief, and non-judgmental.
 
-If a message contains self-harm signals or crisis language, chat bypasses avatar/personality generation and returns a fixed safety response instead. The response shows a warning and points to external help such as local emergency services and the 988 Suicide & Crisis Lifeline in the U.S.
+If a message contains self-harm, abuse, severe distress, or crisis language, chat bypasses avatar/personality generation and returns a fixed Turkish safety response instead. It does not mention policy. If immediate danger is detected, it also suggests 112 or local urgent support.
 
 Crisis request:
 
@@ -305,9 +310,9 @@ Crisis response:
 
 ```json
 {
-  "response": "Safety warning: I am concerned about your immediate safety...",
+  "response": "Bu biraz ağır görünüyor… bunu tek başına taşımak zorunda değilsin. Güvendiğin biriyle konuşman iyi gelebilir. İstersen bulunduğun yerde destek hatlarını birlikte bulabiliriz. Eğer şu anda acil bir tehlike varsa Türkiye'deysen 112 Acil Çağrı Merkezi'ni arayabilirsin.",
   "tone": "safety-focused",
-  "suggestion": "It may be safest to contact emergency services or a trusted crisis line now.",
+  "suggestion": "Acil tehlike varsa 112 veya bulunduğun yerdeki acil destek hattına ulaşman iyi olabilir.",
   "memoryUsed": false,
   "premiumUpsell": null,
   "avatarNameUsed": false

@@ -18,6 +18,18 @@ services:
         sync: false
       - key: OPENAI_MODEL
         value: gpt-4o-mini
+      - key: EMAIL_PROVIDER
+        value: smtp
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
@@ -25,6 +37,6 @@ services:
       - key: STRIPE_PREMIUM_PRICE_ID
         sync: false
       - key: APP_BASE_URL
-        value: https://api.enisapp.com
+        value: https://enisapp.com
       - key: FREE_DAILY_CHAT_LIMIT
-        value: 10
+        value: 30

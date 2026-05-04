@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { authRouter } from "../src/modules/auth/auth.routes.js";
+import { authRouter, verificationStatus } from "../src/modules/auth/auth.routes.js";
 import { registerUser } from "../src/modules/auth/auth.service.js";
+import { checkInRouter } from "../src/modules/checkins/checkin.routes.js";
+import { chatRouter } from "../src/modules/chat/chat.routes.js";
 import {
   applyAvatarNameToResponse,
   companionIdentity,
@@ -13,6 +15,7 @@ import {
   mandatorySignupConsents
 } from "../src/modules/legal/consent.service.js";
 import { legalRouter } from "../src/modules/legal/legal.routes.js";
+import { memoryRouter } from "../src/modules/memory/memory.routes.js";
 import { getLegalDocument, listLegalDocuments } from "../src/modules/legal/legal.service.js";
 import { userRouter } from "../src/modules/users/user.routes.js";
 
@@ -81,21 +84,22 @@ test("marketing consent is optional during signup", () => {
 });
 
 test("legal endpoints return the active document version", () => {
-  const slugs = [
-    "privacy-policy",
-    "kvkk-clarification",
-    "explicit-consent",
-    "terms-of-use",
-    "distance-sales-agreement",
-    "cancellation-refund-policy",
-    "disclaimer",
-    "faq"
-  ];
+  const expectedTitles = {
+    "privacy-policy": "Gizlilik Politikası",
+    "kvkk-clarification": "KVKK Aydınlatma Metni",
+    "explicit-consent": "Açık Rıza Metni",
+    "terms-of-use": "Kullanım Şartları",
+    "distance-sales-agreement": "Mesafeli Satış Sözleşmesi",
+    "cancellation-refund-policy": "İptal ve İade Politikası",
+    disclaimer: "Sorumluluk Reddi",
+    faq: "Sıkça Sorulan Sorular"
+  };
 
-  for (const slug of slugs) {
+  for (const [slug, title] of Object.entries(expectedTitles)) {
     assert.equal(routeExists(legalRouter, "get", `/${slug}`), true);
     const document = getLegalDocument(slug);
     assert.equal(document.slug, slug);
+    assert.equal(document.title, title);
     assert.equal(document.version, "2026-04-29");
     assert.equal(document.company.legalName, "EQ Bilişim Teknolojileri Ltd. Şti.");
   }
@@ -121,10 +125,12 @@ test("generic legal slug route returns a document", () => {
 
 test("legal texts contain the required wellness disclaimer", () => {
   for (const document of listLegalDocuments()) {
-    assert.match(document.content, /Enis is not psychotherapy/i);
-    assert.match(document.content, /Enis does not diagnose or treat/i);
-    assert.match(document.content, /wellness and emotional support only/i);
-    assert.match(document.content, /emergency services or qualified professionals/i);
+    assert.match(document.content, /Enis psikoterapi hizmeti değildir/i);
+    assert.match(document.content, /Enis tanı, tedavi veya tıbbi yönlendirme yapmaz/i);
+    assert.match(document.content, /duygusal destek ve farkındalık amaçlıdır/i);
+    assert.match(document.content, /Acil durumlarda 112/i);
+    assert.match(document.content, /EQ Bilişim Teknolojileri Ltd\. Şti\./i);
+    assert.match(document.content, /Ümraniye \/ İstanbul \/ Türkiye/i);
   }
 });
 
@@ -158,9 +164,27 @@ test("export my data endpoint exists", () => {
   assert.equal(routeExists(userRouter, "get", "/me/export"), true);
 });
 
+test("memory privacy endpoints exist", () => {
+  assert.equal(routeExists(memoryRouter, "get", "/"), true);
+  assert.equal(routeExists(memoryRouter, "delete", "/"), true);
+});
+
+test("daily check-in endpoints exist", () => {
+  assert.equal(routeExists(checkInRouter, "post", "/"), true);
+  assert.equal(routeExists(checkInRouter, "get", "/today"), true);
+});
+
+test("chat sessions endpoint exists", () => {
+  assert.equal(routeExists(chatRouter, "get", "/sessions"), true);
+});
+
 test("account placeholder endpoints exist", () => {
   assert.equal(routeExists(authRouter, "post", "/forgot-password"), true);
   assert.equal(routeExists(authRouter, "post", "/email-verification"), true);
+  assert.equal(routeExists(authRouter, "post", "/resend-verification"), true);
+  assert.equal(routeExists(authRouter, "get", "/verify-email"), true);
+  assert.equal(verificationStatus({ sent: false }), 503);
+  assert.equal(verificationStatus({ sent: true }), 202);
 });
 
 test("avatarName is only used for premium or trial chat mode", () => {
@@ -184,6 +208,6 @@ test("avatarName is only used for premium or trial chat mode", () => {
 test("Enis identity copy is legal-safe and brand-specific", () => {
   assert.equal(
     companionIdentity.copy,
-    "Enis is an AI wellness companion for supportive reflection."
+    "You are Enis, a close digital companion, not an assistant. You are not a therapist. Listen first, reflect the feeling, remember gently, and stay warm, short, human-like, and present. Do not diagnose, lecture, rush into advice, or sound like a generic wellness coach."
   );
 });
