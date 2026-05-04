@@ -11,11 +11,18 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default("7d"),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default("gpt-4o-mini"),
+  EMAIL_PROVIDER: z.enum(["smtp", "resend"]).default("smtp"),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PREMIUM_PRICE_ID: z.string().optional(),
   APP_BASE_URL: z.string().url().default("http://localhost:4000"),
-  FREE_DAILY_CHAT_LIMIT: z.coerce.number().int().positive().default(10)
+  FREE_DAILY_CHAT_LIMIT: z.coerce.number().int().positive().default(30)
 });
 
 export const env = envSchema.parse(process.env);

@@ -20,6 +20,11 @@ const userProfileSchema = z.object({
   mainGoal: z.string().trim().min(1).max(240).optional(),
   preferredAvatar: z.string().trim().min(1).max(40).optional(),
   avatarName: z.string().trim().min(1).max(40).optional(),
+  avatarCharacterId: z.string().trim().min(1).max(40).optional(),
+  avatarCharacterName: z.string().trim().min(1).max(40).optional(),
+  avatarVoiceStyle: z.string().trim().min(1).max(40).optional(),
+  avatarVisualStyle: z.string().trim().min(1).max(160).optional(),
+  avatarPersonalityStyle: z.string().trim().min(1).max(160).optional(),
   notificationConsent: z.boolean().optional(),
   marketingConsent: z.boolean().optional()
 });

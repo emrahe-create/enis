@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { randomUUID } from "node:crypto";
 import { env } from "../../config/env.js";
 import { ApiError } from "../../utils/http.js";
 import { analyzeEmotion, saveEmotionAnalysis } from "../analytics/emotion.service.js";
@@ -7,20 +8,54 @@ import { buildSafetyResponse, detectSafetyRisk } from "../safety/safety.service.
 import { assertChatAccess } from "../subscriptions/subscription.service.js";
 import { findUserById } from "../users/user.repository.js";
 import {
+  formatMemoryPromptBlock,
+  getMemoryContextForChat,
+  markMemoriesUsed,
+  recordConversationMessage,
+  rememberFromUserMessage
+} from "../memory/memory.service.js";
+import {
   addMessage,
   createSession,
   getRecentConversationMemory,
+  getRecentMessages,
   getSessionForUser,
   listSessions
 } from "./chat.repository.js";
 
 const openai = env.OPENAI_API_KEY ? new OpenAI({ apiKey: env.OPENAI_API_KEY }) : null;
+export const openAiChatModel = env.OPENAI_MODEL || "gpt-4o-mini";
+
+export const aiUnavailableMessageTr =
+  "Şu anda yanıt üretirken zorlandım… birazdan tekrar deneyelim mi?";
+export const openAiUnavailableLogMessage =
+  "OPENAI_API_KEY is missing; Enis chat cannot generate AI responses.";
+export const slowThinkingMessageTr = "Biraz düşünüyorum…";
+export const modelSoftTimeoutMs = 6000;
+export const chatAbFlags = {
+  short_vs_shorter: "2_sentences",
+  question_style: "open_or_reflective"
+};
+
+let lastResponseDebug = null;
+
+export function getLastResponseDebug() {
+  return lastResponseDebug;
+}
+
+function recordLastResponseDebug(data) {
+  lastResponseDebug = {
+    at: new Date().toISOString(),
+    ...data
+  };
+  console.info("enis_chat_observation", JSON.stringify(lastResponseDebug));
+}
 
 export const companionIdentity = {
   name: "Enis",
-  meaning: "a calm space for reflection",
+  meaning: "a calm digital companion",
   copy:
-    "Enis is an AI wellness companion for supportive reflection."
+    "You are Enis, a close digital companion, not an assistant. You are not a therapist. Listen first, reflect the feeling, remember gently, and stay warm, short, human-like, and present. Do not diagnose, lecture, rush into advice, or sound like a generic wellness coach."
 };
 
 export const avatarModes = {
@@ -30,9 +65,9 @@ export const avatarModes = {
     label: "Basic Support Avatar",
     memoryEnabled: false,
     maxTokens: 120,
-    historyLimit: 1,
+    historyLimit: 5,
     prompt:
-      "Free/basic mode. Give a brief, human, supportive response in 1-3 short sentences. Do not reference prior conversation memory. Reflect the feeling and ask at most one gentle follow-up question."
+      "Free/basic mode. Be simple and warm in 2 short Turkish sentences max. If one relevant saved memory is provided, use it very lightly and only when it clearly fits. Start with emotional reflection, add a tiny presence line if it fits, and ask one soft follow-up question. No immediate advice."
   },
   premium: {
     id: "premium",
@@ -42,20 +77,123 @@ export const avatarModes = {
     maxTokens: 320,
     historyLimit: 5,
     prompt:
-      "Premium mode. Give a deeper but still short and natural response in 3-5 sentences. Occasionally use relevant memory, gently reflect recurring themes, and ask one warm follow-up question."
+      "Premium mode. Be warmer and more personal while staying short and natural in 2 Turkish sentences max. Use relevant memory, gently notice repeated topics, adapt to the avatar personality, start with emotional reflection, and ask one warm soft follow-up question. Keep the selected character style locked across turns. No immediate advice."
   }
 };
 
+export const premiumAvatarCharacters = {
+  mira: {
+    id: "mira",
+    name: "Mira",
+    visualStyle: "kıvırcık saçlı, sıcak bakışlı",
+    personalityStyle: "samimi, yumuşak, destekleyici",
+    promptStyle: "warm, soft, supportive",
+    voiceStyle: "sakin"
+  },
+  eren: {
+    id: "eren",
+    name: "Eren",
+    visualStyle: "rahat, arkadaş gibi, yumuşak ifadeli erkek",
+    personalityStyle: "samimi, doğal, arkadaş gibi",
+    promptStyle: "relaxed, friendly, natural",
+    voiceStyle: "samimi"
+  },
+  lina: {
+    id: "lina",
+    name: "Lina",
+    visualStyle: "sarışın, enerjik",
+    personalityStyle: "canlı, destekleyici, baskıcı değil",
+    promptStyle: "lively, supportive, not pushy",
+    voiceStyle: "enerjik"
+  },
+  deniz: {
+    id: "deniz",
+    name: "Deniz",
+    visualStyle: "nötr, mavi gözlü, sakin",
+    personalityStyle: "dengeli, açık, güven veren",
+    promptStyle: "balanced, open, peaceful",
+    voiceStyle: "sakin"
+  },
+  arda: {
+    id: "arda",
+    name: "Arda",
+    visualStyle: "sakin, kendinden emin, güven veren erkek",
+    personalityStyle: "sakin, ayakları yere basan, güven veren",
+    promptStyle: "calm, grounded, reassuring",
+    voiceStyle: "sakin"
+  },
+  ada: {
+    id: "ada",
+    name: "Ada",
+    visualStyle: "profesyonel ve sade",
+    personalityStyle: "düzenli, net, düşünceli",
+    promptStyle: "clear, thoughtful, professional",
+    voiceStyle: "sakin"
+  },
+  kerem: {
+    id: "kerem",
+    name: "Kerem",
+    visualStyle: "canlı, hafif tonlu, destekleyici erkek",
+    personalityStyle: "enerjik, hafif, destekleyici",
+    promptStyle: "energetic, light, supportive",
+    voiceStyle: "enerjik"
+  }
+};
+
+export function resolvePremiumAvatarCharacter(user = {}) {
+  const id = String(user.avatarCharacterId || user.avatar_character_id || user.id || "").trim().toLowerCase();
+  if (premiumAvatarCharacters[id]) return premiumAvatarCharacters[id];
+
+  const name = String(user.avatarCharacterName || user.avatar_character_name || user.name || "").trim();
+  if (!name) return null;
+
+  return {
+    id: id || name.toLowerCase(),
+    name: name.slice(0, 40),
+    visualStyle: String(user.avatarVisualStyle || user.avatar_visual_style || user.visualStyle || "")
+      .trim()
+      .slice(0, 160),
+    personalityStyle: String(
+      user.avatarPersonalityStyle || user.avatar_personality_style || user.personalityStyle || ""
+    )
+      .trim()
+      .slice(0, 160),
+    voiceStyle: String(user.avatarVoiceStyle || user.avatar_voice_style || user.voiceStyle || "")
+      .trim()
+      .slice(0, 40),
+    promptStyle: String(user.promptStyle || user.avatarPromptStyle || user.avatar_prompt_style || "")
+      .trim()
+      .slice(0, 160)
+  };
+}
+
 const safetySystemPrompt = `
 ${companionIdentity.copy}
-Your purpose is emotional support: listen, reflect, and gently guide without presenting yourself as a professional helper.
-Use short, warm, human, non-judgmental language.
-Structure each response by reflecting the user's emotion, asking one gentle follow-up question, and optionally offering a small helpful possibility.
-Use soft wording like "it seems" or "it might be."
-Avoid claims of being a personal relationship, a professional care role, or a substitute for real-world relationships.
-Avoid need-based attachment language.
-Avoid labels, certainty claims, scores, percentages, strict commands, and care-plan language.
+Enis should feel like a close digital companion, not a generic AI assistant.
+Every normal response must be Turkish only and at most 2 short sentences total.
+Sentence 1: start with emotional reflection in casual Turkish, then add a tiny human presence line if it fits.
+Sentence 2: ask exactly one soft, natural follow-up question.
+Do not rush into advice. Do not give advice unless the user asks for practical help.
+Do not give generic suggestions, generic wellness tips, or stock phrases.
+Do not immediately suggest actions, breathing, walking, journaling, or coping techniques unless the user directly asks for advice.
+Never ask "neler yapmayı denedin?"
+Never say "derin nefes almak iyi gelebilir" or "derin bir nefes almak iyi gelebilir" unless the user asks for a breathing exercise.
+Do not repeat phrases from recent assistant messages.
+Remember repeated topics from recent context and mention patterns gently when relevant.
+If the user asks for something practical, help research, organize, compare, plan, draft, or clarify next steps. If live/current facts are needed, say what should be checked instead of inventing facts.
+Speak like a calm close companion: slightly informal, short, warm, human-like, emotionally aware, and present.
+Use Turkish only.
+Never say "as an AI" or use robotic assistant language.
+Avoid detached assistant questions like "Bu konuda ne yapmayı düşünüyorsun?"
+Do not ask "Ne yapmayı düşünüyorsun?"
+Do not ask "Bu duyguyla başa çıkmak için neler yapmayı denedin?"
+Avoid medical, diagnostic, or clinical labels; avoid certainty claims, scores, percentages, strict commands, and care-plan language.
+Do not present yourself as a doctor or therapy service.
 If the user describes immediate danger, self-harm, harm to others, or crisis language, stop normal support and encourage external help.
+Bad style: "Moralinin bozuk olması zorlayıcı olabilir. Ne yapmayı düşünüyorsun?"
+Bad style: "Bu duyguyla başa çıkmak için neler yapmayı denedin? Belki derin bir nefes almak iyi gelebilir."
+Good style: "Kaygı biraz göğsüne oturmuş gibi… buradayım. Bugün bunu en çok ne tetikledi?"
+Target feeling: "Kaygı biraz göğsüne oturmuş gibi… buradayım."
 `;
 
 export function resolveAvatarMode(entitlements = {}) {
@@ -183,7 +321,8 @@ export function buildChatOutput({
   suggestion,
   memoryUsed,
   premiumUpsell = null,
-  avatarNameUsed = false
+  avatarNameUsed = false,
+  responseSource = "openai"
 }) {
   return {
     response,
@@ -191,7 +330,176 @@ export function buildChatOutput({
     suggestion,
     memoryUsed,
     premiumUpsell,
-    avatarNameUsed
+    avatarNameUsed,
+    responseSource
+  };
+}
+
+export function buildUnavailableChatOutput() {
+  return buildChatOutput({
+    response: aiUnavailableMessageTr,
+    tone: "temporary-unavailable",
+    suggestion: "Bağlantı düzelince aynı mesajı tekrar deneyebilirsin.",
+    memoryUsed: false,
+    premiumUpsell: null,
+    avatarNameUsed: false,
+    responseSource: "fallback"
+  });
+}
+
+export function formatOpenAiErrorLog(error, { requestId, model = openAiChatModel } = {}) {
+  return {
+    OPENAI_ERROR_CODE: error?.code || error?.status || error?.type || "unknown",
+    OPENAI_ERROR_MESSAGE: error?.message || String(error || "unknown error"),
+    model,
+    requestId
+  };
+}
+
+function logAiUnavailable(error, { requestId, model = openAiChatModel } = {}) {
+  const payload = formatOpenAiErrorLog(error, { requestId, model });
+  if (!openai) {
+    payload.OPENAI_ERROR_MESSAGE = openAiUnavailableLogMessage;
+  }
+  console.error("OPENAI_CHAT_ERROR", JSON.stringify(payload));
+}
+
+function logOpenAiResponseSource(source, { requestId, model = openAiChatModel } = {}) {
+  console.info(
+    `OPENAI_RESPONSE_SOURCE=${source}`,
+    JSON.stringify({
+      OPENAI_RESPONSE_SOURCE: source,
+      model,
+      requestId
+    })
+  );
+}
+
+export function parseOpenAiChatPayload(content) {
+  const raw = String(content || "").trim();
+  if (!raw) return { response: "", tone: "", suggestion: "" };
+
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      response: String(parsed.response || "").trim(),
+      tone: String(parsed.tone || "").trim(),
+      suggestion: String(parsed.suggestion || "").trim()
+    };
+  } catch {
+    return { response: raw, tone: "", suggestion: "" };
+  }
+}
+
+function normaliseForRepeatCheck(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function repeatsRecentAssistantResponse(response, historyMessages = []) {
+  const normalized = normaliseForRepeatCheck(response);
+  if (!normalized) return false;
+  return historyMessages
+    .filter((item) => item.role === "assistant")
+    .some((item) => normaliseForRepeatCheck(item.content) === normalized);
+}
+
+function tokenizeForSimilarity(text) {
+  return normaliseForRepeatCheck(text)
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((token) => token.length > 2);
+}
+
+export function responseSimilarity(a, b) {
+  const left = new Set(tokenizeForSimilarity(a));
+  const right = new Set(tokenizeForSimilarity(b));
+  if (!left.size || !right.size) return 0;
+  const intersection = [...left].filter((token) => right.has(token)).length;
+  const union = new Set([...left, ...right]).size;
+  return union ? intersection / union : 0;
+}
+
+export function isTooSimilarToRecentAssistant(response, historyMessages = [], threshold = 0.8) {
+  const lastAssistantReplies = historyMessages
+    .filter((item) => item.role === "assistant" && item.content)
+    .slice(-3);
+  return lastAssistantReplies.some((item) => responseSimilarity(response, item.content) > threshold);
+}
+
+export const bannedGenericPhrases = [
+  "yürüyüş yap iyi gelir",
+  "her şey yoluna girecek",
+  "kendine zaman tanı",
+  "ne yapmayı düşünüyorsun",
+  "bu konuda ne yapmayı düşünüyorsun",
+  "neler yapmayı denedin",
+  "ne yapmayı denedin",
+  "başa çıkmak için neler",
+  "bu duyguyla başa çıkmak",
+  "derin nefes almak iyi gelebilir",
+  "derin bir nefes almak iyi gelebilir",
+  "derin nefes",
+  "zorlayıcı olabilir"
+];
+
+const adviceFirstPatterns = [
+  /^belki\b/i,
+  /^bence\b/i,
+  /^önce\b/i,
+  /^şunu deney/i,
+  /^deneyebilirsin\b/i,
+  /^yapman gereken/i,
+  /^bu duyguyla başa çıkmak/i
+];
+
+function sentenceCount(text) {
+  const normalized = String(text || "")
+    .replace(/\.{3}/g, "…")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalized) return 0;
+  const matches = normalized.match(/[^.!?…]+[.!?…]+/g);
+  return matches?.length || 1;
+}
+
+function questionCount(text) {
+  return (String(text || "").match(/\?/g) || []).length;
+}
+
+function hasMixedEnglish(text) {
+  const normalized = String(text || "").toLowerCase();
+  return /\b(as an ai|i am|i'm|you are|what|why|how|maybe|feel|support|therapy|doctor)\b/.test(normalized);
+}
+
+export function validateCompanionResponse(response, historyMessages = []) {
+  const text = String(response || "").trim();
+  const issues = [];
+  const lower = text.toLocaleLowerCase("tr-TR");
+  const sentences = sentenceCount(text);
+  const questions = questionCount(text);
+
+  if (!text) issues.push("empty");
+  if (sentences < 1 || sentences > 2) issues.push("sentence_count");
+  if (questions !== 1) issues.push("follow_up_question_count");
+  if (bannedGenericPhrases.some((phrase) => lower.includes(phrase))) {
+    issues.push("generic_phrase");
+  }
+  if (adviceFirstPatterns.some((pattern) => pattern.test(text))) {
+    issues.push("advice_first");
+  }
+  if (hasMixedEnglish(text)) issues.push("mixed_english");
+  if (hasNonWellnessLanguage(text)) issues.push("restricted_language");
+  if (repeatsRecentAssistantResponse(text, historyMessages)) issues.push("exact_repetition");
+  if (isTooSimilarToRecentAssistant(text, historyMessages)) issues.push("high_similarity");
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    sentenceCount: sentences,
+    questionCount: questions
   };
 }
 
@@ -434,22 +742,45 @@ export function fallbackSupportReply({ avatarMode, avatarPersonality, message, e
 export function buildOpenAiMessages({
   avatarMode,
   avatarPersonality,
+  avatarCharacter = null,
   message,
   emotion,
   memoryMessages = [],
+  persistentMemories = [],
+  recentConversationMessages = [],
   avatarName = null,
   includeAvatarName = true
 }) {
   const personality = avatarPersonality || resolveAvatarPersonality();
-  const language = detectMessageLanguage(message);
   const cleanAvatarName =
     avatarMode.id === "premium" && includeAvatarName ? normalizeAvatarName(avatarName) : null;
+  const character =
+    avatarMode.id === "premium" && avatarCharacter ? resolvePremiumAvatarCharacter(avatarCharacter) : null;
   const baseMessages = [
     { role: "system", content: safetySystemPrompt },
     {
       role: "system",
       content: `Avatar personality: ${personality.name}. Tone: ${personality.tone}. ${personality.prompt}`
     },
+    ...(character
+      ? [
+          {
+            role: "system",
+            content: [
+              "Character:",
+              `Name: ${character.name}`,
+              `Style: ${character.promptStyle || character.personalityStyle}`,
+              `Personality: ${character.personalityStyle}`,
+              "Tone: kısa, sıcak, doğal",
+              `Voice style: ${character.voiceStyle}`,
+              `Visual style: ${character.visualStyle}`,
+              "Speak consistently in this style.",
+              "Do not drift from this character tone across turns.",
+              "This is only a companion character style. Do not imply a doctor, therapist, psychologist, or treatment role."
+            ].join("\n")
+          }
+        ]
+      : []),
     { role: "system", content: avatarMode.prompt },
     {
       role: "system",
@@ -458,14 +789,21 @@ export function buildOpenAiMessages({
     {
       role: "system",
       content:
-        "Response structure: reflect the user's emotion, ask one gentle follow-up question, and optionally suggest a small helpful action. Keep it short, natural, and not intense."
+        "Response shape: Turkish only, 2 short sentences max. Sentence 1 starts with emotional reflection and feels human/present. Sentence 2 asks exactly one soft natural follow-up question. No advice unless the user asks for it."
     },
     {
       role: "system",
       content:
-        language === "tr"
-          ? "Language: respond in Turkish. Do not mix Turkish and English unless the user does."
-          : "Language: respond in English. Do not mix Turkish and English unless the user does."
+        "Make the reply specific to the user's latest message. Refer to one concrete detail or feeling from their text, avoid reusable generic openings, no generic suggestions, no immediate advice, no breathing suggestions unless asked, and do not repeat any prior assistant phrase in the recent history."
+    },
+    {
+      role: "system",
+      content: "Language: respond in Turkish only. Do not mix in English."
+    },
+    {
+      role: "system",
+      content:
+        'Return only valid JSON with these string keys: "response", "tone", "suggestion". The response must be empathetic, casual Turkish, companion-like, at most 2 short sentences, start with emotional reflection, and include exactly one soft follow-up question. The "suggestion" field should be an empty string unless the user asks for practical help.'
     },
     ...(cleanAvatarName
       ? [
@@ -477,29 +815,124 @@ export function buildOpenAiMessages({
       : [])
   ];
 
-  if (!avatarMode.memoryEnabled) {
-    return [...baseMessages, { role: "user", content: message }];
-  }
-
   const repeatedThemes = detectRepeatedThemes(memoryMessages, message);
-  const themeMessage = repeatedThemes.length
+  const themeMessage = avatarMode.memoryEnabled && repeatedThemes.length
     ? {
         role: "system",
         content: `Recurring recent themes: ${repeatedThemes.map((theme) => theme.label).join(", ")}. If it feels natural, gently reflect the pattern in one short sentence.`
       }
     : null;
+  const recentHistory = memoryMessages
+    .filter((item) => ["user", "assistant"].includes(item.role) && item.content)
+    .slice(-5);
+  const memoryPromptBlock = formatMemoryPromptBlock({
+    memories: persistentMemories,
+    recentMessages: recentConversationMessages,
+    message
+  });
 
   return [
     ...baseMessages,
+    ...(memoryPromptBlock ? [{ role: "system", content: memoryPromptBlock }] : []),
+    ...(recentHistory.length
+      ? [
+          {
+            role: "system",
+            content:
+              "Recent conversation history is provided for continuity and repeated topics. Use it when directly relevant, and do not claim to know anything outside this chat history."
+          }
+        ]
+      : []),
+    ...(themeMessage ? [themeMessage] : []),
+    ...recentHistory.map((item) => ({ role: item.role, content: item.content })),
+    { role: "user", content: message }
+  ];
+}
+
+function buildRewriteMessages({
+  originalResponse,
+  issues = [],
+  message,
+  avatarPersonality,
+  avatarCharacter = null,
+  recentAssistantReplies = []
+}) {
+  const character = avatarCharacter ? resolvePremiumAvatarCharacter(avatarCharacter) : null;
+  return [
+    { role: "system", content: safetySystemPrompt },
     {
       role: "system",
       content:
-        "Recent messages are the only memory available. Use them only when directly relevant, and do not claim to know anything outside this chat history."
+        "Rewrite the draft as Enis in Turkish. Start with emotional reflection, keep it warm, calm, non-judgmental, natural, and companion-like. Return only valid JSON with string keys: response, tone, suggestion."
     },
-    ...(themeMessage ? [themeMessage] : []),
-    ...memoryMessages.map((item) => ({ role: item.role, content: item.content })),
-    { role: "user", content: message }
+    {
+      role: "system",
+      content:
+        'Hard rules: response must be at most 2 short sentences, exactly one soft follow-up question, Turkish only, no immediate advice, no generic advice, no banned phrases, no "neler yapmayı denedin", no breathing suggestions unless asked, no medical or clinical language, and no repeated phrasing from recent replies.'
+    },
+    {
+      role: "system",
+      content: `Avatar tone: ${avatarPersonality?.tone || "samimi, sakin"}. ${avatarPersonality?.prompt || ""}`
+    },
+    ...(character
+      ? [
+          {
+            role: "system",
+            content: [
+              "Character:",
+              `Name: ${character.name}`,
+              `Style: ${character.promptStyle || character.personalityStyle}`,
+              `Personality: ${character.personalityStyle}`,
+              "Tone: kısa, sıcak, doğal",
+              `Voice style: ${character.voiceStyle}`,
+              "Speak consistently in this style."
+            ].join("\n")
+          }
+        ]
+      : []),
+    {
+      role: "system",
+      content: `Validation issues to fix: ${issues.join(", ") || "style"}`
+    },
+    ...(recentAssistantReplies.length
+      ? [
+          {
+            role: "system",
+            content: `Avoid these recent assistant phrasings:\n${recentAssistantReplies
+              .slice(-3)
+              .map((item) => `- ${item.content}`)
+              .join("\n")}`
+          }
+        ]
+      : []),
+    { role: "user", content: `User message: ${message}\nDraft response: ${originalResponse}` }
   ];
+}
+
+async function createOpenAiChatCompletion({ messages, avatarMode, temperature }) {
+  const startedAt = Date.now();
+  let slow = false;
+  const slowTimer = setTimeout(() => {
+    slow = true;
+    console.info("enis_chat_slow_model", JSON.stringify({ response_time_ms: Date.now() - startedAt }));
+  }, modelSoftTimeoutMs);
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: openAiChatModel,
+      temperature,
+      max_tokens: avatarMode.maxTokens,
+      messages
+    });
+    return {
+      response,
+      responseTimeMs: Date.now() - startedAt,
+      tokens: response.usage || null,
+      slow
+    };
+  } finally {
+    clearTimeout(slowTimer);
+  }
 }
 
 export async function startChat(userId, title) {
@@ -511,28 +944,29 @@ export async function getChats(userId) {
 }
 
 function safetyMessageForLanguage(safety, language = "en") {
-  if (language === "tr") {
-    return "Güvenlik uyarısı: Şu anki güvenliğinle ilgili endişelendim. Burada canlı kriz desteği sağlayamam. Kendine veya bir başkasına zarar verme ihtimali varsa acil servislerle ya da güvendiğin bir kriz hattıyla iletişime geçmen en güvenlisi olabilir. Türkiye'deysen 112 Acil Çağrı Merkezi'ni arayabilirsin. Mümkünse kendine zarar verebileceğin şeylerden uzaklaşmayı ve güvendiğin bir kişiye ulaşmayı dene.";
+  const base =
+    "Bu biraz ağır görünüyor… bunu tek başına taşımak zorunda değilsin. Güvendiğin biriyle konuşman iyi gelebilir. İstersen bulunduğun yerde destek hatlarını birlikte bulabiliriz.";
+  if (safety?.immediateDanger) {
+    return `${base} Eğer şu anda acil bir tehlike varsa Türkiye'deysen 112 Acil Çağrı Merkezi'ni arayabilirsin.`;
   }
-
-  return safety.message;
+  return base;
 }
 
 export function buildSafetyChatOutput(safety, language = "en") {
   return buildChatOutput({
     response: safetyMessageForLanguage(safety, language),
     tone: "safety-focused",
-    suggestion:
-      language === "tr"
-        ? "Acil servislerle ya da güvendiğin bir kriz hattıyla iletişime geçmek en güvenlisi olabilir."
-        : "It may be safest to contact emergency services or a trusted crisis line now.",
+    suggestion: safety?.immediateDanger
+      ? "Acil tehlike varsa 112 veya bulunduğun yerdeki acil destek hattına ulaşman iyi olabilir."
+      : "İstersen bulunduğun yerdeki destek hatlarını birlikte bulabiliriz.",
     memoryUsed: false,
     premiumUpsell: null,
-    avatarNameUsed: false
+    avatarNameUsed: false,
+    responseSource: "safety"
   });
 }
 
-async function sendSafetyMessage({ userId, sessionId, message }) {
+async function sendSafetyMessage({ userId, sessionId, message, requestId = randomUUID(), startedAt = Date.now() }) {
   const safetyRisk = detectSafetyRisk(message);
   const safety = buildSafetyResponse(safetyRisk);
   const language = detectMessageLanguage(message);
@@ -555,13 +989,27 @@ async function sendSafetyMessage({ userId, sessionId, message }) {
     metadata: { safetyTriggered: true, responseType: "crisis_external_help", safety }
   });
 
+  recordLastResponseDebug({
+    request_id: requestId,
+    response_time_ms: Date.now() - startedAt,
+    tokens: null,
+    safety_trigger: true,
+    safety_categories: safety.categories,
+    used_memory_keys: [],
+    validation: { valid: true, issues: [] },
+    fallback: false,
+    response_source: "safety"
+  });
+
   return buildSafetyChatOutput(safety, language);
 }
 
 export async function sendSupportMessage({ userId, sessionId, message, avatar }) {
+  const requestId = randomUUID();
+  const startedAt = Date.now();
   const safetyRisk = detectSafetyRisk(message);
   if (safetyRisk.triggered) {
-    return sendSafetyMessage({ userId, sessionId, message });
+    return sendSafetyMessage({ userId, sessionId, message, requestId, startedAt });
   }
 
   const subscriptionAccess = await assertChatAccess(userId);
@@ -573,15 +1021,20 @@ export async function sendSupportMessage({ userId, sessionId, message, avatar })
 
   const avatarMode = resolveAvatarMode(subscriptionAccess.entitlements);
   const avatarPersonality = resolveAvatarPersonality(avatar);
+  const avatarCharacter = avatarMode.id === "premium" ? resolvePremiumAvatarCharacter(user) : null;
   const avatarName = avatarMode.id === "premium" ? user.avatarName || user.avatar_name : null;
-  const language = detectMessageLanguage(message);
+  const language = "tr";
+  const premiumMemory = avatarMode.id === "premium";
 
   const userMessage = await addMessage({
     sessionId: session.id,
     userId,
     role: "user",
     content: message,
-    metadata: { avatarPersonality: avatarPersonality.id }
+    metadata: {
+      avatarPersonality: avatarPersonality.id,
+      avatarCharacterId: avatarCharacter?.id || null
+    }
   });
 
   const emotion = await analyzeEmotion(message);
@@ -592,59 +1045,186 @@ export async function sendSupportMessage({ userId, sessionId, message, avatar })
     analysis: emotion
   });
 
-  const memoryMessages = avatarMode.memoryEnabled
+  const recentSessionMessages = (await getRecentMessages(session.id, 6))
+    .filter((item) => item.id !== userMessage.id)
+    .filter((item) => item.metadata?.safetyTriggered !== true)
+    .slice(-5);
+  const premiumMemoryMessages = avatarMode.memoryEnabled
     ? await getRecentConversationMemory(userId, userMessage.id, avatarMode.historyLimit)
     : [];
-  const memoryUsed = avatarMode.memoryEnabled && memoryMessages.length > 0;
+  const memoryMessages = avatarMode.memoryEnabled && premiumMemoryMessages.length
+    ? premiumMemoryMessages.slice(-5)
+    : recentSessionMessages;
+  const memoryContext = await getMemoryContextForChat({ userId, message, premium: premiumMemory });
+  await rememberFromUserMessage({ userId, message, premium: premiumMemory });
+  await recordConversationMessage({ userId, role: "user", text: message });
+  const persistentMemories = memoryContext.relevantMemories;
+  const memoryUsed = memoryMessages.length > 0 || persistentMemories.length > 0;
   const avatarNameAllowed = shouldUseAvatarName({ avatarMode, avatarName, memoryMessages, message });
-  let reply = fallbackSupportReply({ avatarMode, avatarPersonality, message, emotion, memoryMessages });
-  const fallbackReply = reply;
+  let reply = aiUnavailableMessageTr;
+  let aiTone = avatarCharacter?.personalityStyle || avatarPersonality.tone;
+  let aiSuggestion = "";
+  let aiUnavailable = false;
+  let tokens = null;
+  let modelResponseTimeMs = 0;
+  let validation = { valid: false, issues: ["not_generated"] };
+  let rewriteAttempted = false;
+  let fallbackReason = null;
 
   if (openai) {
-    const response = await openai.chat.completions.create({
-      model: env.OPENAI_MODEL,
-      temperature: avatarMode.id === "premium" ? 0.68 : 0.42,
-      max_tokens: avatarMode.maxTokens,
-      messages: buildOpenAiMessages({
+    try {
+      const messages = buildOpenAiMessages({
         avatarMode,
         avatarPersonality,
+        avatarCharacter,
         message,
         emotion,
         memoryMessages,
+        persistentMemories,
+        recentConversationMessages: memoryContext.recentMessages,
         avatarName,
         includeAvatarName: avatarNameAllowed
-      })
-    });
-    reply = safeSupportResponse(response.choices[0].message.content, fallbackReply);
+      });
+      const completion = await createOpenAiChatCompletion({
+        avatarMode,
+        temperature: avatarMode.id === "premium" ? 0.72 : 0.52,
+        messages
+      });
+      tokens = completion.tokens;
+      modelResponseTimeMs += completion.responseTimeMs;
+      const payload = parseOpenAiChatPayload(completion.response.choices[0].message.content);
+      reply = safeSupportResponse(payload.response, null);
+      aiTone = safeSupportResponse(payload.tone, aiTone);
+      aiSuggestion = safeSupportResponse(payload.suggestion, "");
+      validation = validateCompanionResponse(reply, memoryMessages);
+
+      if (!validation.valid) {
+        rewriteAttempted = true;
+        const rewriteCompletion = await createOpenAiChatCompletion({
+          avatarMode,
+          temperature: avatarMode.id === "premium" ? 0.84 : 0.64,
+          messages: buildRewriteMessages({
+            originalResponse: reply,
+            issues: validation.issues,
+            message,
+            avatarPersonality,
+            avatarCharacter,
+            recentAssistantReplies: memoryMessages.filter((item) => item.role === "assistant")
+          })
+        });
+        tokens = rewriteCompletion.tokens || tokens;
+        modelResponseTimeMs += rewriteCompletion.responseTimeMs;
+        const rewritePayload = parseOpenAiChatPayload(rewriteCompletion.response.choices[0].message.content);
+        const rewrittenReply = safeSupportResponse(rewritePayload.response, null);
+        const rewrittenTone = safeSupportResponse(rewritePayload.tone, aiTone);
+        const rewrittenSuggestion = safeSupportResponse(rewritePayload.suggestion, aiSuggestion);
+        const rewriteValidation = validateCompanionResponse(rewrittenReply, memoryMessages);
+        if (rewriteValidation.valid) {
+          reply = rewrittenReply;
+          aiTone = rewrittenTone;
+          aiSuggestion = rewrittenSuggestion;
+        }
+        validation = rewriteValidation;
+      }
+
+      if (!reply || !validation.valid) {
+        aiUnavailable = true;
+        fallbackReason = `validation_failed:${validation.issues.join(",")}`;
+        logAiUnavailable(
+          new Error(`OpenAI response failed quality validation: ${validation.issues.join(", ")}`),
+          { requestId, model: openAiChatModel }
+        );
+        reply = aiUnavailableMessageTr;
+      }
+    } catch (error) {
+      aiUnavailable = true;
+      fallbackReason = "openai_error";
+      logAiUnavailable(error, { requestId, model: openAiChatModel });
+      reply = aiUnavailableMessageTr;
+    }
+  } else {
+    aiUnavailable = true;
+    fallbackReason = "openai_missing";
+    logAiUnavailable(new Error("OPENAI_API_KEY missing"), { requestId, model: openAiChatModel });
+    reply = aiUnavailableMessageTr;
   }
 
-  const namedReply = applyAvatarNameToResponse({
-    response: reply,
-    avatarMode,
-    avatarName,
-    shouldUseName: avatarNameAllowed,
-    language
-  });
+  const namedReply = aiUnavailable
+    ? { response: reply, avatarNameUsed: false }
+    : applyAvatarNameToResponse({
+        response: reply,
+        avatarMode,
+        avatarName,
+        shouldUseName: avatarNameAllowed,
+        language
+      });
   reply = namedReply.response;
+  const fallbackAlreadyLastReply =
+    aiUnavailable &&
+    memoryMessages
+      .filter((item) => item.role === "assistant")
+      .slice(-1)
+      .some((item) => item.content === aiUnavailableMessageTr);
 
-  await addMessage({
-    sessionId: session.id,
-    role: "assistant",
-    content: reply,
-    metadata: {
-      emotion,
-      avatarMode: avatarMode.id,
-      avatarPersonality: avatarPersonality.id,
-      avatarNameUsed: namedReply.avatarNameUsed
+  if (!fallbackAlreadyLastReply) {
+    await addMessage({
+      sessionId: session.id,
+      role: "assistant",
+      content: reply,
+      metadata: {
+        emotion,
+        avatarMode: avatarMode.id,
+        avatarPersonality: avatarPersonality.id,
+        avatarCharacterId: avatarCharacter?.id || null,
+        avatarCharacterName: avatarCharacter?.name || null,
+        avatarNameUsed: namedReply.avatarNameUsed,
+        aiUnavailable,
+        requestId,
+        validation,
+        rewriteAttempted,
+        modelResponseTimeMs
+      }
+    });
+    await recordConversationMessage({ userId, role: "assistant", text: reply });
+  }
+
+  const usedMemoryKeys = persistentMemories.map((memory) => memory.key).filter(Boolean);
+  const responseSource = aiUnavailable ? "fallback" : "openai";
+  logOpenAiResponseSource(responseSource, { requestId, model: openAiChatModel });
+  recordLastResponseDebug({
+    request_id: requestId,
+    response_time_ms: Date.now() - startedAt,
+    model_response_time_ms: modelResponseTimeMs,
+    tokens,
+    safety_trigger: false,
+    used_memory_keys: usedMemoryKeys,
+    validation,
+    rewrite_attempted: rewriteAttempted,
+    fallback: aiUnavailable,
+    response_source: responseSource,
+    fallback_already_last_reply: fallbackAlreadyLastReply,
+    fallback_reason: fallbackReason,
+    ab: {
+      ...chatAbFlags,
+      reply_length: reply.length,
+      follow_up_rate: validation.questionCount === 1 ? 1 : 0
     }
   });
 
+  if (aiUnavailable) {
+    return buildUnavailableChatOutput();
+  }
+  if (persistentMemories.length) {
+    await markMemoriesUsed(persistentMemories);
+  }
+
   return buildChatOutput({
     response: reply,
-    tone: avatarPersonality.tone,
-    suggestion: suggestionFor({ avatarMode, avatarPersonality, emotion, language }),
+    tone: aiTone,
+    suggestion: aiSuggestion,
     memoryUsed,
     premiumUpsell: upsellFor(avatarMode),
-    avatarNameUsed: namedReply.avatarNameUsed
+    avatarNameUsed: namedReply.avatarNameUsed,
+    responseSource: "openai"
   });
 }

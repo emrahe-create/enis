@@ -113,7 +113,7 @@ export async function assertChatAccess(userId) {
   if (chatUsage.limited && chatUsage.remaining <= 0) {
     throw new ApiError(
       429,
-      "Free chat limit reached. Upgrade to premium to unlock unlimited emotional support chat.",
+      "Bugünkü ücretsiz sohbet hakkın doldu. İstersen yarın devam edebilir ya da Premium ile sınırsız sohbeti açabilirsin.",
       { usage: chatUsage }
     );
   }

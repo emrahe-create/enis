@@ -14,126 +14,135 @@ export const enisCompany = {
 };
 
 export const enisIdentityCopy =
-  "Enis is an AI wellness companion for supportive reflection.";
+  "Enis, duygusal destek ve farkındalık amacıyla geliştirilmiş yapay zeka destekli bir iyi oluş uygulamasıdır.";
 
 const legalVersion = "2026-04-29";
 const updatedAt = "2026-04-29";
 
 const wellnessDisclaimer = [
   enisIdentityCopy,
-  "Enis is not psychotherapy.",
-  "Enis does not diagnose or treat.",
-  "AI responses are for wellness and emotional support only.",
-  "In crisis situations, users must contact emergency services or qualified professionals."
-].join(" ");
+  "Enis psikoterapi hizmeti değildir.",
+  "Enis tanı, tedavi veya tıbbi yönlendirme yapmaz.",
+  "Yapay zeka yanıtları yalnızca duygusal destek ve farkındalık amaçlıdır.",
+  "Acil durumlarda 112, sağlık kuruluşları veya yetkin uzmanlarla iletişime geçilmelidir."
+].join("\n");
+
+const companyInfo = [
+  "EQ Bilişim Teknolojileri Ltd. Şti.",
+  "Fatih Sultan Mehmet Mah. Poligon Cad. Buyaka 2 Sitesi No:8C/1 P.K. 34771 Ümraniye / İstanbul / Türkiye",
+  "Alemdağ V.D. – 3290486809",
+  "info@eqbilisim.com.tr",
+  "+90 216 225 66 19",
+  "+90 532 384 82 64"
+].join("\n");
 
 function documentContent(...sections) {
-  return [wellnessDisclaimer, ...sections].join("\n\n");
+  return [wellnessDisclaimer, companyInfo, ...sections].join("\n\n");
 }
 
 export const legalDocuments = {
   "privacy-policy": {
     slug: "privacy-policy",
-    title: "Privacy Policy",
+    title: "Gizlilik Politikası",
     version: legalVersion,
     updatedAt,
     company: enisCompany,
     content: documentContent(
-      "EQ Bilişim processes account, profile, subscription, chat, consent, and usage data to provide the Enis app experience.",
-      "Users may request access, export, correction, or deletion of their data through the account endpoints or by contacting EQ Bilişim.",
-      "Marketing communication is optional and can be refused without blocking core account access."
+      "EQ Bilişim; hesap, profil, abonelik, sohbet, onay ve kullanım verilerini Enis deneyimini sunmak, güvenliği sağlamak, destek taleplerini yanıtlamak ve yasal yükümlülükleri yerine getirmek amacıyla işler.",
+      "Kullanıcılar verilerine erişme, verilerini dışa aktarma, düzeltme veya hesap silme taleplerini uygulama içindeki hesap uç noktaları ya da EQ Bilişim iletişim kanalları üzerinden iletebilir.",
+      "Pazarlama iletişimi isteğe bağlıdır. Pazarlama izninin verilmemesi temel hesap erişimini engellemez."
     )
   },
   "kvkk-clarification": {
     slug: "kvkk-clarification",
-    title: "KVKK Clarification Text",
+    title: "KVKK Aydınlatma Metni",
     version: legalVersion,
     updatedAt,
     company: enisCompany,
     content: documentContent(
-      "Personal data is processed under applicable Turkish data protection rules for account creation, app security, subscription tracking, user support, and consent records.",
-      "The data controller is EQ Bilişim Teknolojileri Ltd. Şti. Users may contact EQ Bilişim for KVKK-related requests.",
-      "Consent records may include consent type, version, acceptance time, IP address, and user agent."
+      "Veri sorumlusu EQ Bilişim Teknolojileri Ltd. Şti.’dir. Kişisel veriler hesap oluşturma, uygulama güvenliği, abonelik takibi, kullanıcı desteği, onay kayıtları ve hizmetin iyileştirilmesi amaçlarıyla işlenir.",
+      "İşlenen veriler e-posta, profil bilgileri, abonelik bilgileri, sohbet içerikleri, kullanım kayıtları ve kullanıcı tarafından verilen onay kayıtlarını içerebilir.",
+      "Onay kayıtları onay türü, sürüm, kabul zamanı, IP adresi ve kullanıcı aracısı bilgisini içerebilir. Kullanıcılar KVKK kapsamındaki taleplerini EQ Bilişim’e iletebilir."
     )
   },
   "explicit-consent": {
     slug: "explicit-consent",
-    title: "Explicit Consent Text",
+    title: "Açık Rıza Metni",
     version: legalVersion,
     updatedAt,
     company: enisCompany,
     content: documentContent(
-      "Optional explicit consent may be requested for product improvement, personalization, and optional communication preferences.",
-      "Explicit consent is separate from mandatory signup notices and can be refused where it is optional.",
-      "Users may update optional consent preferences through account settings or by contacting EQ Bilişim."
+      "Açık rıza, zorunlu kayıt bilgilendirmelerinden ayrıdır ve yalnızca isteğe bağlı işleme faaliyetleri için talep edilir.",
+      "Kullanıcılar ürün geliştirme, kişiselleştirme ve isteğe bağlı iletişim tercihleri kapsamında açık rıza verebilir. Açık rıza verilmemesi temel hesap erişimini engellemez.",
+      "Kullanıcılar isteğe bağlı rıza tercihlerini hesap ayarları veya EQ Bilişim iletişim kanalları üzerinden güncelleyebilir ya da geri alabilir."
     )
   },
   "terms-of-use": {
     slug: "terms-of-use",
-    title: "Terms of Use",
+    title: "Kullanım Şartları",
     version: legalVersion,
     updatedAt,
     company: enisCompany,
     content: documentContent(
-      "Users agree to use Enis as a wellness and emotional support companion only.",
-      "Users should not rely on Enis for emergency decisions, professional evaluation, or regulated professional services.",
-      "EQ Bilişim may update app features, subscription rules, safety flows, and legal documents as the product evolves."
+      "Kullanıcılar Enis’i yalnızca iyi oluş, duygusal destek ve farkındalık amacıyla kullanmayı kabul eder.",
+      "Enis acil kararlar, profesyonel değerlendirme, sağlık hizmeti, hukuki danışmanlık veya benzeri düzenlenmiş hizmetler için kullanılmamalıdır.",
+      "EQ Bilişim; uygulama özelliklerini, abonelik kurallarını, güvenlik akışlarını ve yasal metinleri ürün geliştikçe güncelleyebilir."
     )
   },
   "distance-sales-agreement": {
     slug: "distance-sales-agreement",
-    title: "Distance Sales Agreement",
+    title: "Mesafeli Satış Sözleşmesi",
     version: legalVersion,
     updatedAt,
     company: enisCompany,
     content: documentContent(
-      "Premium subscription purchases are provided digitally by EQ Bilişim for the Enis app.",
-      "Before starting a premium purchase, users must accept the active distance sales agreement version.",
-      "Subscription price, billing period, renewal details, and cancellation options are shown in the payment flow before checkout."
+      "Premium abonelik satın alımları Enis uygulaması kapsamında EQ Bilişim tarafından dijital hizmet olarak sunulur.",
+      "Premium satın alma başlatılmadan önce kullanıcı aktif Mesafeli Satış Sözleşmesi sürümünü kabul etmelidir.",
+      "Abonelik ücreti, fatura dönemi, yenileme bilgileri, iptal seçenekleri ve satın almaya ilişkin temel bilgiler ödeme akışında kullanıcıya gösterilir."
     )
   },
   "cancellation-refund-policy": {
     slug: "cancellation-refund-policy",
-    title: "Cancellation and Refund Policy",
+    title: "İptal ve İade Politikası",
     version: legalVersion,
     updatedAt,
     company: enisCompany,
     content: documentContent(
-      "Users can cancel premium renewal according to the app store, Stripe, or payment provider flow used for purchase.",
-      "Refund requests are reviewed according to applicable law, payment provider rules, and the digital subscription details shown before checkout.",
-      "Before starting a premium purchase, users must accept the active cancellation and refund policy version."
+      "Kullanıcılar Premium abonelik yenilemesini satın alma sırasında kullanılan ödeme sağlayıcı akışı üzerinden iptal edebilir.",
+      "İade talepleri yürürlükteki mevzuat, ödeme sağlayıcı kuralları ve satın alma öncesinde gösterilen dijital abonelik koşulları dikkate alınarak değerlendirilir.",
+      "Premium satın alma başlatılmadan önce kullanıcı aktif İptal ve İade Politikası sürümünü kabul etmelidir."
     )
   },
   disclaimer: {
     slug: "disclaimer",
-    title: "Wellness Disclaimer",
+    title: "Sorumluluk Reddi",
     version: legalVersion,
     updatedAt,
     company: enisCompany,
     content: documentContent(
-      "Enis offers reflective, supportive language for everyday emotional wellness.",
-      "Enis may misunderstand context, tone, urgency, or personal circumstances.",
-      "Users remain responsible for seeking appropriate external help when a situation feels unsafe, urgent, or beyond app-based support."
+      "Enis günlük duyguları fark etmeye yardımcı olabilecek destekleyici ve yansıtıcı yanıtlar üretir.",
+      "Yapay zeka bağlamı, tonu, aciliyeti veya kişisel koşulları yanlış anlayabilir. Bu nedenle Enis yanıtları kesin yönlendirme veya profesyonel değerlendirme olarak kabul edilmemelidir.",
+      "Kullanıcı kendini güvende hissetmediğinde, durum acil olduğunda veya uygulama tabanlı desteğin ötesine geçtiğinde uygun dış desteğe başvurmalıdır."
     )
   },
   faq: {
     slug: "faq",
-    title: "FAQ",
+    title: "Sıkça Sorulan Sorular",
     version: legalVersion,
     updatedAt,
     company: enisCompany,
     content: documentContent(
-      "What is Enis? Enis is an AI wellness companion owned by EQ Bilişim.",
-      "Can Enis replace professional help? No. Enis is for wellness and emotional support only.",
-      "Does Enis replace human connection? No. Enis is a digital wellness tool and should not replace support from trusted people or qualified professionals.",
-      "What happens in crisis messages? Enis stops normal chat and encourages external help."
+      "Enis nedir? Enis, EQ Bilişim tarafından geliştirilen yapay zeka destekli bir iyi oluş uygulamasıdır.",
+      "Enis profesyonel desteğin yerine geçer mi? Hayır. Enis yalnızca duygusal destek ve farkındalık amacıyla kullanılmalıdır.",
+      "Enis insan ilişkilerinin yerini alır mı? Hayır. Enis dijital bir iyi oluş aracıdır ve güvenilen kişilerden veya yetkin uzmanlardan alınabilecek desteğin yerine geçmez.",
+      "Kriz mesajlarında ne olur? Enis normal sohbet akışını durdurur ve kullanıcıyı dış yardım almaya yönlendirir."
     )
   }
 };
 
 export function getLegalDocument(slug) {
   const document = legalDocuments[slug];
-  if (!document) throw new ApiError(404, "Legal document not found");
+  if (!document) throw new ApiError(404, "Yasal metin bulunamadı");
   return document;
 }
 

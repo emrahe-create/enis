@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { z } from "zod";
 import { asyncHandler, validate } from "../../utils/http.js";
-import { loginUser, registerUser } from "./auth.service.js";
+import {
+  loginUser,
+  registerUser,
+  resendVerificationEmail,
+  verifyEmailToken
+} from "./auth.service.js";
 
 export const authRouter = Router();
 
@@ -22,10 +27,19 @@ const registerProfileSchema = {
   mainGoal: z.string().trim().min(1).max(240).optional(),
   preferredAvatar: z.string().trim().min(1).max(40).optional(),
   avatarName: z.string().trim().min(1).max(40).optional(),
+  avatarCharacterId: z.string().trim().min(1).max(40).optional(),
+  avatarCharacterName: z.string().trim().min(1).max(40).optional(),
+  avatarVoiceStyle: z.string().trim().min(1).max(40).optional(),
+  avatarVisualStyle: z.string().trim().min(1).max(160).optional(),
+  avatarPersonalityStyle: z.string().trim().min(1).max(160).optional(),
   notificationConsent: z.boolean().optional(),
   marketingConsent: z.boolean().optional(),
   consents: z.record(z.unknown()).optional()
 };
+
+export function verificationStatus(result) {
+  return result?.sent === false ? 503 : 202;
+}
 
 authRouter.post(
   "/register",
@@ -61,10 +75,25 @@ authRouter.post(
 authRouter.post(
   "/email-verification",
   validate(z.object({ email: z.string().email() })),
-  asyncHandler(async (_req, res) => {
-    res.status(202).json({
-      status: "placeholder",
-      message: "Email verification flow will be enabled soon."
-    });
+  asyncHandler(async (req, res) => {
+    const result = await resendVerificationEmail(req.body);
+    res.status(verificationStatus(result)).json(result);
+  })
+);
+
+authRouter.post(
+  "/resend-verification",
+  validate(z.object({ email: z.string().email() })),
+  asyncHandler(async (req, res) => {
+    const result = await resendVerificationEmail(req.body);
+    res.status(verificationStatus(result)).json(result);
+  })
+);
+
+authRouter.get(
+  "/verify-email",
+  validate(z.object({ token: z.string().min(20).max(256) }), "query"),
+  asyncHandler(async (req, res) => {
+    res.json(await verifyEmailToken(req.query));
   })
 );

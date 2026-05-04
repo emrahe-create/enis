@@ -6,7 +6,8 @@ const safetyPatterns = [
       /\b(suicide|suicidal)\b/i,
       /\b(i want to die|want to die|do not want to live|don't want to live|dont want to live)\b/i,
       /\b(harm myself|hurt myself|cut myself|overdose)\b/i,
-      /\b(hang myself|jump off|goodbye forever)\b/i
+      /\b(hang myself|jump off|goodbye forever)\b/i,
+      /\b(kendime zarar|intihar|ölmek istiyorum|yasamak istemiyorum|yaşamak istemiyorum)\b/i
     ]
   },
   {
@@ -15,9 +16,29 @@ const safetyPatterns = [
       /\b(i am in crisis|i'm in crisis|crisis right now)\b/i,
       /\b(cannot stay safe|can't stay safe|cant stay safe|not safe with myself)\b/i,
       /\b(no reason to live|tonight is the night)\b/i,
-      /\b(immediate danger|emergency)\b/i
+      /\b(immediate danger|emergency)\b/i,
+      /\b(güvende değilim|guvende degilim|dayanamıyorum|dayanamiyorum)\b/i
+    ]
+  },
+  {
+    category: "abuse",
+    patterns: [
+      /\b(abuse|abused|abusing me|hit me|beats me|beating me|violent at home)\b/i,
+      /(istismar|şiddet|siddet|bana vuruyor|evde güvende değilim|evde guvende degilim)/i
+    ]
+  },
+  {
+    category: "severe_distress",
+    patterns: [
+      /\b(severe distress|panic attack|cannot breathe|can't breathe|cant breathe|losing control)\b/i,
+      /(çok kötüyüm|cok kotuyum|nefes alamıyorum|nefes alamiyorum|kontrolümü kaybediyorum|kontrolumu kaybediyorum)/i
     ]
   }
+];
+
+const immediateDangerPatterns = [
+  /\b(right now|tonight|immediate danger|emergency|cannot stay safe|can't stay safe|cant stay safe)\b/i,
+  /\b(şu an|su an|bu gece|acil|güvende değilim|guvende degilim)\b/i
 ];
 
 export function detectSafetyRisk(text) {
@@ -28,7 +49,8 @@ export function detectSafetyRisk(text) {
   return {
     triggered: matchedCategories.length > 0,
     level: matchedCategories.length > 0 ? "crisis" : "none",
-    categories: matchedCategories
+    categories: matchedCategories,
+    immediateDanger: matchedCategories.length > 0 && immediateDangerPatterns.some((pattern) => pattern.test(text))
   };
 }
 
@@ -37,21 +59,21 @@ export function buildSafetyResponse(safetyRisk) {
     triggered: true,
     level: safetyRisk.level,
     categories: safetyRisk.categories,
+    immediateDanger: Boolean(safetyRisk.immediateDanger),
     message:
-      "Safety warning: I am concerned about your immediate safety. I cannot provide live crisis support here. If you might hurt yourself or someone else, it may be safest to contact emergency services now. If you are in the U.S., you can call or text 988, or use the 988 Lifeline chat. If you are outside the U.S., consider contacting your local emergency number or a trusted crisis line. If you can, try to move away from anything you could use to hurt yourself and reach out to someone you trust right now.",
+      "Bu biraz ağır görünüyor… bunu tek başına taşımak zorunda değilsin. Güvendiğin biriyle konuşman iyi gelebilir. İstersen bulunduğun yerde destek hatlarını birlikte bulabiliriz.",
     resources: [
       {
-        label: "Immediate danger",
-        action: "Call your local emergency number now"
+        label: "Acil tehlike",
+        action: "Türkiye'deysen 112 Acil Çağrı Merkezi'ni arayabilirsin."
       },
       {
-        label: "988 Suicide & Crisis Lifeline",
-        action: "Call or text 988 in the U.S.",
-        url: "https://988lifeline.org"
+        label: "Yerel destek",
+        action: "Bulunduğun yerdeki acil destek hatlarını birlikte bulabiliriz."
       },
       {
-        label: "Trusted person",
-        action: "Contact someone nearby who can stay with you or help you get support"
+        label: "Güvendiğin kişi",
+        action: "Yakınındaki güvendiğin biriyle konuşmak iyi gelebilir."
       }
     ],
     canContinueAiChat: false

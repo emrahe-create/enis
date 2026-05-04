@@ -4,14 +4,30 @@ export function notFound(_req, _res, next) {
   next(new ApiError(404, "Route not found"));
 }
 
-export function errorHandler(error, _req, res, _next) {
+export function errorHandler(error, req, res, _next) {
   const status = error.status || 500;
+  const requestId = req.requestId;
+  const route = `${req.method} ${req.originalUrl || req.url}`;
+  console.error(
+    "BACKEND_REQUEST_ERROR",
+    JSON.stringify({
+      route,
+      status,
+      requestId,
+      message: error.message,
+      details: error.details || null
+    })
+  );
+
   const payload = {
     error: {
-      message: status === 500 ? "Internal server error" : error.message
+      message: process.env.NODE_ENV === "production" && status === 500
+        ? "Internal server error"
+        : error.message
     }
   };
 
+  if (requestId) payload.error.requestId = requestId;
   if (error.details) payload.error.details = error.details;
   if (process.env.NODE_ENV !== "production" && status === 500) {
     payload.error.debug = error.message;

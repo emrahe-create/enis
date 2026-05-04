@@ -3,6 +3,10 @@ import { query } from "../../db/pool.js";
 const publicUserColumns = `
   id,
   email,
+  email_verified,
+  email_verified AS "emailVerified",
+  email_verified_at,
+  email_verified_at AS "emailVerifiedAt",
   display_name,
   display_name AS "displayName",
   full_name,
@@ -22,6 +26,16 @@ const publicUserColumns = `
   preferred_avatar AS "preferredAvatar",
   avatar_name,
   avatar_name AS "avatarName",
+  avatar_character_id,
+  avatar_character_id AS "avatarCharacterId",
+  avatar_character_name,
+  avatar_character_name AS "avatarCharacterName",
+  avatar_voice_style,
+  avatar_voice_style AS "avatarVoiceStyle",
+  avatar_visual_style,
+  avatar_visual_style AS "avatarVisualStyle",
+  avatar_personality_style,
+  avatar_personality_style AS "avatarPersonalityStyle",
   notification_consent,
   notification_consent AS "notificationConsent",
   marketing_consent,
@@ -33,7 +47,16 @@ const publicUserColumns = `
 
 export async function findUserByEmail(email) {
   const result = await query(
-    `SELECT *, display_name AS "displayName", avatar_name AS "avatarName"
+    `SELECT *,
+        display_name AS "displayName",
+        email_verified AS "emailVerified",
+        email_verified_at AS "emailVerifiedAt",
+        avatar_name AS "avatarName",
+        avatar_character_id AS "avatarCharacterId",
+        avatar_character_name AS "avatarCharacterName",
+        avatar_voice_style AS "avatarVoiceStyle",
+        avatar_visual_style AS "avatarVisualStyle",
+        avatar_personality_style AS "avatarPersonalityStyle"
      FROM users
      WHERE email = $1`,
     [email.toLowerCase()]
@@ -63,6 +86,11 @@ export async function createUser({
   mainGoal,
   preferredAvatar,
   avatarName,
+  avatarCharacterId,
+  avatarCharacterName,
+  avatarVoiceStyle,
+  avatarVisualStyle,
+  avatarPersonalityStyle,
   notificationConsent = false,
   marketingConsent = false
 }) {
@@ -81,10 +109,15 @@ export async function createUser({
        main_goal,
        preferred_avatar,
        avatar_name,
+       avatar_character_id,
+       avatar_character_name,
+       avatar_voice_style,
+       avatar_visual_style,
+       avatar_personality_style,
        notification_consent,
        marketing_consent
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
      RETURNING ${publicUserColumns}`,
     [
       email.toLowerCase(),
@@ -100,6 +133,11 @@ export async function createUser({
       mainGoal || null,
       preferredAvatar || null,
       avatarName || null,
+      avatarCharacterId || null,
+      avatarCharacterName || null,
+      avatarVoiceStyle || null,
+      avatarVisualStyle || null,
+      avatarPersonalityStyle || null,
       Boolean(notificationConsent),
       Boolean(marketingConsent)
     ]
@@ -121,6 +159,11 @@ export async function updateUserProfile(
     mainGoal,
     preferredAvatar,
     avatarName,
+    avatarCharacterId,
+    avatarCharacterName,
+    avatarVoiceStyle,
+    avatarVisualStyle,
+    avatarPersonalityStyle,
     notificationConsent,
     marketingConsent
   }
@@ -138,8 +181,13 @@ export async function updateUserProfile(
          main_goal = COALESCE($10, main_goal),
          preferred_avatar = COALESCE($11, preferred_avatar),
          avatar_name = COALESCE($12, avatar_name),
-         notification_consent = COALESCE($13, notification_consent),
-         marketing_consent = COALESCE($14, marketing_consent),
+         avatar_character_id = COALESCE($13, avatar_character_id),
+         avatar_character_name = COALESCE($14, avatar_character_name),
+         avatar_voice_style = COALESCE($15, avatar_voice_style),
+         avatar_visual_style = COALESCE($16, avatar_visual_style),
+         avatar_personality_style = COALESCE($17, avatar_personality_style),
+         notification_consent = COALESCE($18, notification_consent),
+         marketing_consent = COALESCE($19, marketing_consent),
          updated_at = NOW()
      WHERE id = $1
      RETURNING ${publicUserColumns}`,
@@ -156,6 +204,11 @@ export async function updateUserProfile(
       mainGoal ?? null,
       preferredAvatar ?? null,
       avatarName ?? null,
+      avatarCharacterId ?? null,
+      avatarCharacterName ?? null,
+      avatarVoiceStyle ?? null,
+      avatarVisualStyle ?? null,
+      avatarPersonalityStyle ?? null,
       notificationConsent ?? null,
       marketingConsent ?? null
     ]
@@ -168,6 +221,43 @@ export async function deleteUserById(userId) {
   return result.rows[0] || null;
 }
 
+export async function saveEmailVerificationToken({ userId, tokenHash }) {
+  const result = await query(
+    `UPDATE users
+     SET email_verification_token_hash = $2,
+         email_verification_sent_at = NOW(),
+         updated_at = NOW()
+     WHERE id = $1
+     RETURNING ${publicUserColumns}`,
+    [userId, tokenHash]
+  );
+  return result.rows[0] || null;
+}
+
+export async function findUserByEmailVerificationTokenHash(tokenHash) {
+  const result = await query(
+    `SELECT ${publicUserColumns}
+     FROM users
+     WHERE email_verification_token_hash = $1`,
+    [tokenHash]
+  );
+  return result.rows[0] || null;
+}
+
+export async function markEmailVerifiedByTokenHash(tokenHash) {
+  const result = await query(
+    `UPDATE users
+     SET email_verified = TRUE,
+         email_verified_at = NOW(),
+         email_verification_token_hash = NULL,
+         updated_at = NOW()
+     WHERE email_verification_token_hash = $1
+     RETURNING ${publicUserColumns}`,
+    [tokenHash]
+  );
+  return result.rows[0] || null;
+}
+
 export async function exportUserData(userId) {
   const [
     user,
@@ -175,6 +265,9 @@ export async function exportUserData(userId) {
     consents,
     chatSessions,
     chatMessages,
+    memories,
+    conversationMessages,
+    checkIns,
     emotionAnalyses,
     wellnessEntries,
     expertWaitlist
@@ -191,6 +284,9 @@ export async function exportUserData(userId) {
        ORDER BY chat_messages.created_at ASC`,
       [userId]
     ),
+    query("SELECT * FROM user_memories WHERE user_id = $1 ORDER BY importance DESC, updated_at DESC", [userId]),
+    query("SELECT * FROM conversation_messages WHERE user_id = $1 ORDER BY created_at ASC", [userId]),
+    query("SELECT * FROM daily_checkins WHERE user_id = $1 ORDER BY created_at DESC", [userId]),
     query("SELECT * FROM emotion_analyses WHERE user_id = $1 ORDER BY created_at DESC", [userId]),
     query("SELECT * FROM wellness_entries WHERE user_id = $1 ORDER BY created_at DESC", [userId]),
     query("SELECT * FROM expert_waitlist WHERE user_id = $1 ORDER BY created_at DESC", [userId])
@@ -202,6 +298,9 @@ export async function exportUserData(userId) {
     consents: consents.rows,
     chatSessions: chatSessions.rows,
     chatMessages: chatMessages.rows,
+    memories: memories.rows,
+    conversationMessages: conversationMessages.rows,
+    checkIns: checkIns.rows,
     emotionAnalyses: emotionAnalyses.rows,
     wellnessEntries: wellnessEntries.rows,
     expertWaitlist: expertWaitlist.rows

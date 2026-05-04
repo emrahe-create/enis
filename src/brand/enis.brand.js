@@ -59,7 +59,7 @@ export const enisBrand = {
     }
   },
   assets: {
-    logo: "/assets/brand/logo-enis.svg",
-    appIcon: "/assets/brand/app-icon.svg"
+    logo: "/assets/brand/logo-enis.png",
+    appIcon: "/assets/brand/app-icon.png"
   }
 };

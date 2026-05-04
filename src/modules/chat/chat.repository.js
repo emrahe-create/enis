@@ -37,9 +37,10 @@ export async function addMessage({ sessionId, userId, role, content, metadata = 
 
 export async function getRecentMessages(sessionId, limit = 12) {
   const result = await query(
-    `SELECT role, content, created_at
+    `SELECT id, role, content, metadata, created_at
      FROM chat_messages
      WHERE session_id = $1
+       AND role IN ('user', 'assistant')
      ORDER BY created_at DESC
      LIMIT $2`,
     [sessionId, limit]
