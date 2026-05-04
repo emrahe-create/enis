@@ -2,6 +2,9 @@ import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
 import '../domain/chat_models.dart';
 
+const chatFallbackUnavailableMessage =
+    'Şu anda yanıt üretirken zorlandım… birazdan tekrar deneyelim mi?';
+
 class ChatService {
   ChatService({required ApiClient apiClient}) : _apiClient = apiClient;
 
@@ -9,14 +12,15 @@ class ChatService {
 
   Future<String> startSession() async {
     try {
-      final json = await _apiClient.postJson('/api/chat/sessions', body: {'title': 'Enis chat'});
+      final json = await _apiClient
+          .postJson('/api/chat/sessions', body: {'title': 'Enis sohbet'});
       final session = json['session'];
       if (session is Map<String, dynamic>) {
         final id = session['id']?.toString();
         if (id != null && id.isNotEmpty) return id;
       }
       if (AppConfig.allowMockFallback) return 'mock-session';
-      throw const ApiException('Chat session unavailable');
+      throw const ApiException('Sohbet oturumu başlatılamadı');
     } on ApiException catch (error) {
       if (!error.isNetworkFailure || !AppConfig.allowMockFallback) rethrow;
       return 'mock-session';
@@ -51,46 +55,35 @@ class ChatService {
     required bool premium,
   }) {
     final lower = text.toLowerCase();
-    final turkish = RegExp(r'[çğıöşüİı]').hasMatch(text) ||
-        RegExp(r'\b(ben|bir|çok|bugün|içimde|hissediyorum|zor|kaygı|uyku)\b').hasMatch(lower);
-    final crisis = RegExp(r'\b(kendime zarar|intihar|ölmek istiyorum|suicide|self-harm|hurt myself)\b').hasMatch(lower);
+    final crisis = RegExp(
+            r'\b(kendime zarar|intihar|ölmek istiyorum|suicide|self-harm|hurt myself)\b')
+        .hasMatch(lower);
 
     if (crisis) {
-      return ChatResponse(
-        response: turkish
-            ? 'Bu çok ciddi gelebilir. Şu anda yalnız kalmamaya çalışıp acil destek hattına, 112’ye veya güvendiğin bir kişiye ulaşman önemli.'
-            : 'This sounds urgent. It may help to contact emergency services, a local crisis line, or someone you trust right now.',
+      return const ChatResponse(
+        response:
+            'Bu çok ciddi gelebilir. Şu anda yalnız kalmamaya çalışıp 112’ye, yakınındaki acil destek kaynaklarına veya güvendiğin bir kişiye ulaşman önemli.',
         tone: 'safety',
-        suggestion: turkish ? 'Yakınındaki birinden destek istemeyi düşünebilirsin.' : 'Consider reaching out to immediate outside support.',
+        suggestion: 'Yakınındaki birinden destek istemeyi düşünebilirsin.',
         memoryUsed: false,
         avatarNameUsed: false,
         premiumUpsell: null,
       );
     }
 
-    final structured = avatar == 'structured';
     final guide = avatar == 'guide';
-    final response = turkish
-        ? guide
-            ? 'Bu biraz yavaşlamaya ihtiyaç duyuyor gibi. Şu an bedeninde en çok nerede hissediyorsun?'
-            : structured
-                ? 'Bu yoğun görünüyor. İstersen önce en ağır gelen parçayı ayıralım: ne daha çok öne çıkıyor?'
-                : 'Bunu söylemen iyi oldu. Bu anın en zor tarafı ne gibi geliyor?'
-        : guide
-            ? 'It seems like this wants a slower pace. Where do you feel it most in your body right now?'
-            : structured
-                ? 'That sounds like a lot to hold. What part feels most important to name first?'
-                : 'I’m glad you said it. What feels like the hardest part of this moment?';
 
     return ChatResponse(
-      response: response,
-      tone: guide ? 'peaceful' : structured ? 'calm' : 'warm',
-      suggestion: turkish ? 'İstersen bir nefeslik ara verip tek bir duyguyu adlandır.' : 'You might pause for one breath and name one feeling.',
-      memoryUsed: premium,
+      response: chatFallbackUnavailableMessage,
+      tone: guide
+          ? 'sakin'
+          : avatar == 'structured'
+              ? 'düzenli'
+              : 'samimi',
+      suggestion: 'Bağlantı düzelince aynı mesajı tekrar deneyebilirsin.',
+      memoryUsed: false,
       avatarNameUsed: false,
-      premiumUpsell: premium
-          ? null
-          : 'Sohbetini daha derin hale getirmek ister misin?\nPremium ile devam edebilirsin.',
+      premiumUpsell: null,
     );
   }
 }

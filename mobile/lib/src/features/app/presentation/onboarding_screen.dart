@@ -71,19 +71,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 gradient: EnisBrand.gradient,
                                 borderRadius: BorderRadius.circular(26),
                               ),
-                              child: const Icon(Icons.auto_awesome_rounded, color: Colors.white),
+                              child: const Icon(Icons.auto_awesome_rounded,
+                                  color: Colors.white),
                             ),
                             const SizedBox(height: 26),
                             Text(
-                              slide.en,
+                              slide.tr,
                               textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.headlineMedium,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              slide.tr,
+                              slide.en,
                               textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
                                     color: EnisColors.primaryBlue,
                                   ),
                             ),
@@ -105,7 +109,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     height: 8,
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
-                      color: _index == index ? EnisColors.primaryBlue : EnisColors.deepNavy.withOpacity(0.14),
+                      color: _index == index
+                          ? EnisColors.primaryBlue
+                          : EnisColors.deepNavy.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
@@ -113,14 +119,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               const SizedBox(height: 22),
               GradientButton(
-                label: 'Start / Başla',
+                label: 'Başla',
                 icon: Icons.arrow_forward_rounded,
                 onPressed: widget.onStart,
               ),
               const SizedBox(height: 12),
               TextButton(
                 onPressed: widget.onWelcomeBack,
-                child: const Text('Welcome back / Geri dön'),
+                child: const Text('Geri dön'),
               ),
             ],
           ),

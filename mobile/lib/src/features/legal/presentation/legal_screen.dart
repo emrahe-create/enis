@@ -29,8 +29,8 @@ class _LegalScreenState extends State<LegalScreen> {
     return Scaffold(
       appBar: AppBar(),
       body: ScreenScaffold(
-        title: 'Legal',
-        subtitle: 'KVKK, privacy, terms, and wellness disclaimer.',
+        title: 'Yasal Metinler',
+        subtitle: 'KVKK, gizlilik, kullanım şartları ve sorumluluk reddi.',
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
         child: FutureBuilder<List<LegalDocument>>(
           future: _documents,
@@ -46,15 +46,25 @@ class _LegalScreenState extends State<LegalScreen> {
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
-            final bySlug = {for (final document in snapshot.data!) document.slug: document};
-            final items = [
-              _LegalListItem(label: 'KVKK', slug: 'kvkk-clarification'),
-              _LegalListItem(label: 'Privacy', slug: 'privacy-policy'),
-              _LegalListItem(label: 'Terms', slug: 'terms-of-use'),
-              _LegalListItem(label: 'Disclaimer', slug: 'disclaimer'),
-              _LegalListItem(label: 'Distance sales', slug: 'distance-sales-agreement'),
-              _LegalListItem(label: 'Refund policy', slug: 'cancellation-refund-policy'),
-              _LegalListItem(label: 'FAQ', slug: 'faq'),
+            final bySlug = {
+              for (final document in snapshot.data!) document.slug: document
+            };
+            const items = [
+              _LegalListItem(
+                  label: 'KVKK Aydınlatma Metni', slug: 'kvkk-clarification'),
+              _LegalListItem(
+                  label: 'Açık Rıza Metni', slug: 'explicit-consent'),
+              _LegalListItem(
+                  label: 'Gizlilik Politikası', slug: 'privacy-policy'),
+              _LegalListItem(label: 'Kullanım Şartları', slug: 'terms-of-use'),
+              _LegalListItem(label: 'Sorumluluk Reddi', slug: 'disclaimer'),
+              _LegalListItem(
+                  label: 'Mesafeli Satış Sözleşmesi',
+                  slug: 'distance-sales-agreement'),
+              _LegalListItem(
+                  label: 'İptal ve İade Politikası',
+                  slug: 'cancellation-refund-policy'),
+              _LegalListItem(label: 'Sıkça Sorulan Sorular', slug: 'faq'),
             ];
 
             return ListView.separated(
@@ -65,19 +75,22 @@ class _LegalScreenState extends State<LegalScreen> {
                 final document = bySlug[item.slug];
                 return SoftCard(
                   onTap: () => _openDocument(item.slug),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
-                      const Icon(Icons.article_outlined, color: EnisColors.primaryBlue),
+                      const Icon(Icons.article_outlined,
+                          color: EnisColors.primaryBlue),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(item.label, style: Theme.of(context).textTheme.titleMedium),
+                            Text(item.label,
+                                style: Theme.of(context).textTheme.titleMedium),
                             if (document != null)
                               Text(
-                                'Version ${document.version}',
+                                'Sürüm ${document.version}',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                           ],
@@ -115,11 +128,12 @@ class LegalDetailScreen extends StatelessWidget {
       appBar: AppBar(),
       body: ScreenScaffold(
         title: document.title,
-        subtitle: 'Version ${document.version}',
+        subtitle: 'Sürüm ${document.version}',
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
         child: SoftCard(
           child: SingleChildScrollView(
-            child: Text(document.content, style: Theme.of(context).textTheme.bodyLarge),
+            child: Text(document.content,
+                style: Theme.of(context).textTheme.bodyLarge),
           ),
         ),
       ),

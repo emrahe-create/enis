@@ -16,6 +16,8 @@ class MainShell extends StatefulWidget {
     required this.subscription,
     required this.messages,
     required this.sending,
+    required this.showDailyCheckIn,
+    required this.onDailyCheckInSelected,
     required this.onSendMessage,
     required this.onOpenPremium,
     required this.onOpenLegal,
@@ -23,12 +25,21 @@ class MainShell extends StatefulWidget {
     required this.onExportData,
     required this.onDeleteAccount,
     required this.onLogout,
+    this.returningGreeting,
+    this.dailyPresenceMessage,
+    this.emotionalHook,
+    this.continuityLine,
+    this.nightReflectionPrompt,
+    this.onEmotionalHookSelected,
+    this.onNightReflectionSelected,
   });
 
   final UserProfile profile;
   final SubscriptionSnapshot subscription;
   final List<ChatMessage> messages;
   final bool sending;
+  final bool showDailyCheckIn;
+  final ValueChanged<String> onDailyCheckInSelected;
   final ValueChanged<String> onSendMessage;
   final VoidCallback onOpenPremium;
   final VoidCallback onOpenLegal;
@@ -36,6 +47,13 @@ class MainShell extends StatefulWidget {
   final Future<Map<String, dynamic>> Function() onExportData;
   final Future<void> Function() onDeleteAccount;
   final Future<void> Function() onLogout;
+  final String? returningGreeting;
+  final String? dailyPresenceMessage;
+  final String? emotionalHook;
+  final String? continuityLine;
+  final String? nightReflectionPrompt;
+  final VoidCallback? onEmotionalHookSelected;
+  final VoidCallback? onNightReflectionSelected;
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -52,6 +70,15 @@ class _MainShellState extends State<MainShell> {
         subscription: widget.subscription,
         messages: widget.messages,
         sending: widget.sending,
+        showDailyCheckIn: widget.showDailyCheckIn,
+        returningGreeting: widget.returningGreeting,
+        dailyPresenceMessage: widget.dailyPresenceMessage,
+        emotionalHook: widget.emotionalHook,
+        continuityLine: widget.continuityLine,
+        nightReflectionPrompt: widget.nightReflectionPrompt,
+        onDailyCheckInSelected: widget.onDailyCheckInSelected,
+        onEmotionalHookSelected: widget.onEmotionalHookSelected,
+        onNightReflectionSelected: widget.onNightReflectionSelected,
         onSendMessage: widget.onSendMessage,
         onOpenPremium: widget.onOpenPremium,
       ),

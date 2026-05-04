@@ -14,34 +14,36 @@ class ExploreScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ScreenScaffold(
       title: 'Keşfet',
-      subtitle: 'Mini wellness tools and upcoming expert matching.',
+      subtitle: 'Mini iyi oluş araçları ve yakında uzman eşleştirme.',
       child: ListView(
         children: [
           const _ToolCard(
             icon: Icons.air_rounded,
-            title: 'Breathing',
-            text: 'Take a quiet one-minute breathing pause.',
+            title: 'Nefes Egzersizi',
+            text: 'Kısa ve sakin bir nefes arası.',
           ),
           const SizedBox(height: 12),
           const _ToolCard(
             icon: Icons.self_improvement_rounded,
-            title: 'Meditation',
-            text: 'A short grounding moment for the day.',
+            title: 'Meditasyon',
+            text: 'Gün içinde kısa bir sakinleşme alanı.',
           ),
           const SizedBox(height: 12),
           const _ToolCard(
             icon: Icons.edit_note_rounded,
-            title: 'CBT journal',
-            text: 'Notice a thought, feeling, and gentle next step.',
+            title: 'Düşünce Günlüğü',
+            text: 'Düşünce, duygu ve küçük bir adımı fark et.',
           ),
           const SizedBox(height: 18),
           SoftCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.people_alt_outlined, color: EnisColors.lavender, size: 30),
+                const Icon(Icons.people_alt_outlined,
+                    color: EnisColors.lavender, size: 30),
                 const SizedBox(height: 12),
-                Text('Uzman eşleştirme', style: Theme.of(context).textTheme.titleLarge),
+                Text('Uzman eşleştirme',
+                    style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
                 Text(
                   'Uzman eşleştirme sistemimiz çok yakında aktif olacak. Öncelikli erişim listesine katılarak ilk bilgilendirilenlerden biri olabilirsin.',

@@ -21,22 +21,22 @@ class AvatarOption {
 const avatarOptions = [
   AvatarOption(
     id: 'structured',
-    label: 'Structured',
-    description: 'Calm, organized, and clear.',
+    label: 'Düzenli',
+    description: 'Sakin, planlı ve net.',
     icon: Icons.format_list_bulleted_rounded,
     color: EnisColors.primaryBlue,
   ),
   AvatarOption(
     id: 'friend',
-    label: 'Friend',
-    description: 'Casual, warm, and simple.',
+    label: 'Samimi',
+    description: 'Sıcak, gündelik ve sade.',
     icon: Icons.mode_comment_outlined,
     color: EnisColors.lavender,
   ),
   AvatarOption(
     id: 'guide',
-    label: 'Guide',
-    description: 'Slow, peaceful, and grounding.',
+    label: 'Rehber',
+    description: 'Yavaş, dingin ve toparlayıcı.',
     icon: Icons.spa_outlined,
     color: EnisColors.softPurple,
   ),

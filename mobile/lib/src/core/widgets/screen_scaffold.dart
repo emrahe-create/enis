@@ -33,13 +33,18 @@ class ScreenScaffold extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: Theme.of(context).textTheme.headlineMedium),
+                      Text(title,
+                          style: Theme.of(context).textTheme.headlineMedium),
                       if (subtitle != null) ...[
                         const SizedBox(height: 4),
                         Text(
                           subtitle!,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: EnisColors.deepNavy.withOpacity(0.62),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color:
+                                    EnisColors.deepNavy.withValues(alpha: 0.62),
                               ),
                         ),
                       ],

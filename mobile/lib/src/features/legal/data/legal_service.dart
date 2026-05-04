@@ -18,7 +18,7 @@ class LegalService {
             .toList();
       }
       if (AppConfig.allowMockFallback) return fallbackLegalDocuments;
-      throw const ApiException('Legal documents unavailable');
+      throw const ApiException('Yasal metinlere ulaşılamıyor');
     } on ApiException catch (error) {
       if (!error.isNetworkFailure || !AppConfig.allowMockFallback) rethrow;
       return fallbackLegalDocuments;
@@ -39,54 +39,83 @@ class LegalService {
   }
 }
 
+const _fallbackCompanyInfo = '''
+EQ Bilişim Teknolojileri Ltd. Şti.
+Fatih Sultan Mehmet Mah. Poligon Cad. Buyaka 2 Sitesi No:8C/1 P.K. 34771 Ümraniye / İstanbul / Türkiye
+Alemdağ V.D. – 3290486809
+info@eqbilisim.com.tr
++90 216 225 66 19
++90 532 384 82 64''';
+
+const _fallbackWellnessDisclaimer = '''
+Enis psikoterapi hizmeti değildir.
+Enis tanı, tedavi veya tıbbi yönlendirme yapmaz.
+Yapay zeka yanıtları yalnızca duygusal destek ve farkındalık amaçlıdır.
+Acil durumlarda 112, sağlık kuruluşları veya yetkin uzmanlarla iletişime geçilmelidir.''';
+
 const fallbackLegalDocuments = [
   LegalDocument(
     slug: 'kvkk-clarification',
-    title: 'KVKK',
+    title: 'KVKK Aydınlatma Metni',
     version: 'fallback',
     updatedAt: '2026-04-29',
-    content: 'Enis is for wellness and emotional support only. It is not psychotherapy, diagnosis, or treatment.',
+    content:
+        '$_fallbackWellnessDisclaimer\n\n$_fallbackCompanyInfo\n\nVeri sorumlusu EQ Bilişim Teknolojileri Ltd. Şti.’dir. Kişisel veriler hesap oluşturma, uygulama güvenliği, abonelik takibi, destek talepleri ve onay kayıtlarının tutulması amacıyla işlenir. Kullanıcılar KVKK kapsamındaki talepleri için EQ Bilişim ile iletişime geçebilir.',
+  ),
+  LegalDocument(
+    slug: 'explicit-consent',
+    title: 'Açık Rıza Metni',
+    version: 'fallback',
+    updatedAt: '2026-04-29',
+    content:
+        '$_fallbackWellnessDisclaimer\n\n$_fallbackCompanyInfo\n\nAçık rıza, zorunlu kayıt onaylarından ayrıdır. Kullanıcı isteğe bağlı kişiselleştirme, ürün geliştirme ve iletişim tercihleri için açık rıza verebilir; isteğe bağlı rızalar geri alınabilir.',
   ),
   LegalDocument(
     slug: 'privacy-policy',
-    title: 'Privacy',
+    title: 'Gizlilik Politikası',
     version: 'fallback',
     updatedAt: '2026-04-29',
-    content: 'EQ Bilişim processes account and app data to provide the Enis experience.',
+    content:
+        '$_fallbackWellnessDisclaimer\n\n$_fallbackCompanyInfo\n\nEQ Bilişim, Enis deneyimini sunmak için hesap, profil, abonelik, sohbet, onay ve kullanım verilerini işler. Pazarlama izni isteğe bağlıdır ve temel hesap kullanımını engellemez.',
   ),
   LegalDocument(
     slug: 'terms-of-use',
-    title: 'Terms',
+    title: 'Kullanım Şartları',
     version: 'fallback',
     updatedAt: '2026-04-29',
-    content: 'Use Enis as a wellness support app. In crisis situations contact emergency services or qualified professionals.',
+    content:
+        '$_fallbackWellnessDisclaimer\n\n$_fallbackCompanyInfo\n\nKullanıcılar Enis’i yalnızca iyi oluş ve duygusal destek amaçlı kullanmayı kabul eder. Enis acil kararlar, profesyonel değerlendirme veya düzenlenmiş sağlık hizmetleri için kullanılmamalıdır.',
   ),
   LegalDocument(
     slug: 'disclaimer',
-    title: 'Disclaimer',
+    title: 'Sorumluluk Reddi',
     version: 'fallback',
     updatedAt: '2026-04-29',
-    content: 'Enis does not diagnose or treat. AI responses are for wellness and emotional support only.',
+    content:
+        '$_fallbackWellnessDisclaimer\n\n$_fallbackCompanyInfo\n\nEnis günlük duygu durumunu fark etmeye yardımcı olabilecek destekleyici yanıtlar üretir. Yapay zeka bağlamı veya aciliyeti yanlış anlayabilir; güvenli hissettirmeyen durumlarda dış destek alınmalıdır.',
   ),
   LegalDocument(
     slug: 'distance-sales-agreement',
-    title: 'Distance sales',
+    title: 'Mesafeli Satış Sözleşmesi',
     version: 'fallback',
     updatedAt: '2026-04-29',
-    content: 'Premium purchase details are shown before checkout.',
+    content:
+        '$_fallbackWellnessDisclaimer\n\n$_fallbackCompanyInfo\n\nPremium abonelik dijital hizmet olarak sunulur. Satın alma öncesinde fiyat, dönem, yenileme ve iptal bilgileri ödeme akışında gösterilir. Kullanıcı satın alma öncesi aktif sözleşme sürümünü kabul eder.',
   ),
   LegalDocument(
     slug: 'cancellation-refund-policy',
-    title: 'Refund policy',
+    title: 'İptal ve İade Politikası',
     version: 'fallback',
     updatedAt: '2026-04-29',
-    content: 'Cancellation and refund terms are shown before checkout.',
+    content:
+        '$_fallbackWellnessDisclaimer\n\n$_fallbackCompanyInfo\n\nPremium abonelik yenilemesi kullanılan ödeme sağlayıcı akışı üzerinden iptal edilebilir. İade talepleri yürürlükteki mevzuat, ödeme sağlayıcı kuralları ve satın alma sırasında gösterilen dijital abonelik koşullarına göre değerlendirilir.',
   ),
   LegalDocument(
     slug: 'faq',
-    title: 'FAQ',
+    title: 'Sıkça Sorulan Sorular',
     version: 'fallback',
     updatedAt: '2026-04-29',
-    content: 'Enis is a supportive AI wellness companion app owned by EQ Bilişim.',
+    content:
+        '$_fallbackWellnessDisclaimer\n\n$_fallbackCompanyInfo\n\nEnis nedir? EQ Bilişim tarafından geliştirilen yapay zeka destekli iyi oluş uygulamasıdır. Profesyonel desteğin yerine geçer mi? Hayır. Kriz mesajlarında ne olur? Normal sohbet durur ve dış yardım önerilir.',
   ),
 ];

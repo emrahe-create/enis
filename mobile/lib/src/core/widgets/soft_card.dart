@@ -20,10 +20,10 @@ class SoftCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: EnisColors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: EnisColors.deepNavy.withOpacity(0.06)),
+        border: Border.all(color: EnisColors.deepNavy.withValues(alpha: 0.06)),
         boxShadow: [
           BoxShadow(
-            color: EnisColors.deepNavy.withOpacity(0.06),
+            color: EnisColors.deepNavy.withValues(alpha: 0.06),
             blurRadius: 22,
             offset: const Offset(0, 12),
           ),

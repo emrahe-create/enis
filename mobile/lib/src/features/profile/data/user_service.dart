@@ -13,7 +13,7 @@ class UserService {
       final rawUser = json['user'];
       if (rawUser is Map<String, dynamic>) return UserProfile.fromJson(rawUser);
       if (AppConfig.allowMockFallback) return fallback;
-      throw const ApiException('User profile unavailable');
+      throw const ApiException('Profil bilgilerine ulaşılamıyor');
     } on ApiException catch (error) {
       if (!error.isNetworkFailure || !AppConfig.allowMockFallback) rethrow;
       return fallback;
@@ -22,11 +22,12 @@ class UserService {
 
   Future<UserProfile> updateProfile(UserProfile profile) async {
     try {
-      final json = await _apiClient.patchJson('/api/users/me', body: profile.toPatchJson());
+      final json = await _apiClient.patchJson('/api/users/me',
+          body: profile.toPatchJson());
       final rawUser = json['user'];
       if (rawUser is Map<String, dynamic>) return UserProfile.fromJson(rawUser);
       if (AppConfig.allowMockFallback) return profile;
-      throw const ApiException('User profile update failed');
+      throw const ApiException('Profil güncellenemedi');
     } on ApiException catch (error) {
       if (!error.isNetworkFailure || !AppConfig.allowMockFallback) rethrow;
       return profile;
@@ -40,7 +41,10 @@ class UserService {
       if (!error.isNetworkFailure || !AppConfig.allowMockFallback) rethrow;
       return {
         'exportedAt': DateTime.now().toIso8601String(),
-        'data': {'source': 'mock', 'message': 'API unavailable; local fallback shown.'},
+        'data': {
+          'source': 'mock',
+          'message': 'API kullanılamıyor; yerel örnek veri gösterildi.'
+        },
       };
     }
   }

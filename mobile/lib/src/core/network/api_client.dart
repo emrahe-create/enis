@@ -57,11 +57,13 @@ class ApiClient {
     return _send('GET', path);
   }
 
-  Future<Map<String, dynamic>> postJson(String path, {Map<String, dynamic>? body}) {
+  Future<Map<String, dynamic>> postJson(String path,
+      {Map<String, dynamic>? body}) {
     return _send('POST', path, body: body);
   }
 
-  Future<Map<String, dynamic>> patchJson(String path, {Map<String, dynamic>? body}) {
+  Future<Map<String, dynamic>> patchJson(String path,
+      {Map<String, dynamic>? body}) {
     return _send('PATCH', path, body: body);
   }
 
@@ -86,13 +88,15 @@ class ApiClient {
     try {
       response = await _request(method, uri, headers, body);
     } catch (_) {
-      throw const ApiException('API unavailable');
+      throw const ApiException('API kullanılamıyor');
     }
 
     final decoded = _decodeBody(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(
-        decoded['message']?.toString() ?? decoded['error']?.toString() ?? 'Request failed',
+        decoded['message']?.toString() ??
+            decoded['error']?.toString() ??
+            'İstek tamamlanamadı',
         statusCode: response.statusCode,
       );
     }

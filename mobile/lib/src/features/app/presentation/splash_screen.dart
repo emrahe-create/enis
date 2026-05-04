@@ -22,17 +22,20 @@ class SplashScreen extends StatelessWidget {
                   const SizedBox(height: 22),
                   Text(
                     EnisBrand.appName,
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(fontSize: 44),
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineLarge
+                        ?.copyWith(fontSize: 44),
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    EnisBrand.taglineEn,
+                    EnisBrand.taglineTr,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    EnisBrand.taglineTr,
+                    EnisBrand.taglineEn,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: EnisColors.primaryBlue,

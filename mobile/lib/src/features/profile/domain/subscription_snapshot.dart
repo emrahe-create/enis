@@ -10,13 +10,14 @@ class SubscriptionSnapshot {
   final int? trialDaysRemaining;
 
   String get label {
-    if (premium && status == 'trialing') return 'Premium trial';
+    if (premium && status == 'trialing') return 'Premium deneme';
     if (premium) return 'Premium';
-    return 'Free';
+    return 'Ücretsiz';
   }
 
   factory SubscriptionSnapshot.free() {
-    return const SubscriptionSnapshot(status: 'free', premium: false, trialDaysRemaining: null);
+    return const SubscriptionSnapshot(
+        status: 'free', premium: false, trialDaysRemaining: null);
   }
 
   factory SubscriptionSnapshot.trial({int daysRemaining = 15}) {
@@ -37,12 +38,16 @@ class SubscriptionSnapshot {
     final premium = entitlements is Map<String, dynamic>
         ? entitlements['premium'] == true || entitlements['memory'] == true
         : json['premium'] == true || status == 'active' || status == 'trialing';
-    final daysRemaining = trial is Map<String, dynamic> ? trial['daysRemaining'] : json['trialDaysRemaining'];
+    final daysRemaining = trial is Map<String, dynamic>
+        ? trial['daysRemaining']
+        : json['trialDaysRemaining'];
 
     return SubscriptionSnapshot(
       status: status ?? (premium ? 'active' : 'free'),
       premium: premium,
-      trialDaysRemaining: daysRemaining is int ? daysRemaining : int.tryParse(daysRemaining?.toString() ?? ''),
+      trialDaysRemaining: daysRemaining is int
+          ? daysRemaining
+          : int.tryParse(daysRemaining?.toString() ?? ''),
     );
   }
 }

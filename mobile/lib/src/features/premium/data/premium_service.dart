@@ -26,17 +26,4 @@ class PremiumService {
       return SubscriptionSnapshot.trial();
     }
   }
-
-  Future<String?> createCheckoutSession({required Map<String, bool> consents}) async {
-    try {
-      final json = await _apiClient.postJson(
-        '/api/payments/checkout-session',
-        body: {'consents': consents},
-      );
-      return json['url']?.toString();
-    } on ApiException catch (error) {
-      if (!error.isNetworkFailure || !AppConfig.allowMockFallback) rethrow;
-      return 'https://checkout.stripe.com/mock-enis';
-    }
-  }
 }

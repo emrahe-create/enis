@@ -51,14 +51,15 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
     return AuthLayout(
-      title: 'Welcome back',
-      subtitle: 'Continue your Enis space with your account.',
+      title: 'Geri dön',
+      subtitle: 'Enis hesabınla devam et.',
       child: Column(
         children: [
           SoftCard(
@@ -68,14 +69,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: 'email'),
+                  decoration: const InputDecoration(labelText: 'E-posta'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _passwordController,
                   obscureText: true,
                   textInputAction: TextInputAction.done,
-                  decoration: const InputDecoration(labelText: 'password'),
+                  decoration: const InputDecoration(labelText: 'Şifre'),
                   onSubmitted: (_) => _login(),
                 ),
               ],
@@ -83,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 18),
           GradientButton(
-            label: _loading ? 'Opening...' : 'Welcome back / Geri dön',
+            label: _loading ? 'Açılıyor...' : 'Geri dön',
             icon: Icons.login_rounded,
             enabled: !_loading,
             onPressed: _login,
@@ -91,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 10),
           TextButton(
             onPressed: _loading ? null : widget.onRegisterRequested,
-            child: const Text('Start / Başla'),
+            child: const Text('Hesap oluştur'),
           ),
         ],
       ),

@@ -31,13 +31,15 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: EnisColors.white,
-        indicatorColor: EnisColors.primaryBlue.withOpacity(0.14),
-        labelTextStyle: MaterialStateProperty.resolveWith(
+        indicatorColor: EnisColors.primaryBlue.withValues(alpha: 0.14),
+        labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
-            color: states.contains(MaterialState.selected)
+            color: states.contains(WidgetState.selected)
                 ? EnisColors.primaryBlue
-                : EnisColors.deepNavy.withOpacity(0.62),
-            fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
+                : EnisColors.deepNavy.withValues(alpha: 0.62),
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
             letterSpacing: 0,
           ),
         ),
@@ -47,17 +49,21 @@ class AppTheme {
         fillColor: EnisColors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: EnisColors.deepNavy.withOpacity(0.08)),
+          borderSide:
+              BorderSide(color: EnisColors.deepNavy.withValues(alpha: 0.08)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: EnisColors.deepNavy.withOpacity(0.08)),
+          borderSide:
+              BorderSide(color: EnisColors.deepNavy.withValues(alpha: 0.08)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: EnisColors.primaryBlue, width: 1.4),
+          borderSide:
+              const BorderSide(color: EnisColors.primaryBlue, width: 1.4),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       textTheme: base.textTheme.copyWith(
         headlineLarge: base.textTheme.headlineLarge?.copyWith(
@@ -86,7 +92,7 @@ class AppTheme {
           letterSpacing: 0,
         ),
         bodyMedium: base.textTheme.bodyMedium?.copyWith(
-          color: EnisColors.deepNavy.withOpacity(0.76),
+          color: EnisColors.deepNavy.withValues(alpha: 0.76),
           height: 1.38,
           letterSpacing: 0,
         ),

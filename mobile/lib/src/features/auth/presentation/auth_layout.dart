@@ -29,7 +29,7 @@ class AuthLayout extends StatelessWidget {
             Text(
               subtitle,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: EnisColors.deepNavy.withOpacity(0.64),
+                    color: EnisColors.deepNavy.withValues(alpha: 0.64),
                   ),
             ),
             const SizedBox(height: 24),

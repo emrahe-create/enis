@@ -6,6 +6,7 @@ import '../../../core/brand/enis_brand.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/screen_scaffold.dart';
 import '../../../core/widgets/soft_card.dart';
+import '../../avatar/domain/avatar_character.dart';
 import '../../chat/domain/avatar_option.dart';
 import '../domain/subscription_snapshot.dart';
 import '../domain/user_profile.dart';
@@ -62,10 +63,15 @@ class ProfileScreen extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Hesabımı sil'),
-        content: const Text('This removes the account from the Enis backend when the API is available.'),
+        content: const Text(
+            'Bu işlem API kullanılabiliyorsa Enis hesabını kalıcı olarak siler.'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Delete')),
+          TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Vazgeç')),
+          FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Sil')),
         ],
       ),
     );
@@ -73,7 +79,8 @@ class ProfileScreen extends StatelessWidget {
   }
 
   void _showMessage(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   String _apiErrorMessage(Object error) {
@@ -84,6 +91,9 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avatar = avatarById(profile.preferredAvatar);
+    final character = subscription.premium
+        ? selectedAvatarCharacter(profile.avatarCharacterId)
+        : null;
     return ScreenScaffold(
       title: 'Profil',
       subtitle: EnisBrand.ownerCompany,
@@ -93,13 +103,19 @@ class ProfileScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _InfoRow(label: 'fullName', value: profile.fullName ?? '-'),
-                _InfoRow(label: 'email', value: profile.email),
-                _InfoRow(label: 'Karakterinin adı', value: profile.avatarName ?? '-'),
-                _InfoRow(label: 'selected avatar', value: avatar.label),
-                _InfoRow(label: 'subscription status', value: subscription.label),
+                _InfoRow(label: 'Ad Soyad', value: profile.fullName ?? '-'),
+                _InfoRow(label: 'E-posta', value: profile.email),
                 _InfoRow(
-                  label: 'trial days remaining',
+                    label: 'Karakterinin adı',
+                    value: profile.avatarName ?? '-'),
+                _InfoRow(label: 'Seçili avatar', value: avatar.label),
+                if (character != null)
+                  _InfoRow(label: 'Avatar karakteri', value: character.name),
+                if (character != null)
+                  _InfoRow(label: 'Ses tarzı', value: character.voiceLabel),
+                _InfoRow(label: 'Abonelik durumu', value: subscription.label),
+                _InfoRow(
+                  label: 'Kalan deneme günü',
                   value: subscription.trialDaysRemaining?.toString() ?? '-',
                 ),
               ],
@@ -108,7 +124,7 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 14),
           _ActionTile(
             icon: Icons.auto_awesome_rounded,
-            title: 'Avatar setup',
+            title: 'Avatar ayarları',
             onTap: onOpenAvatarSetup,
           ),
           _ActionTile(
@@ -123,12 +139,12 @@ class ProfileScreen extends StatelessWidget {
           ),
           _ActionTile(
             icon: Icons.menu_book_rounded,
-            title: 'Legal pages',
+            title: 'Yasal metinler',
             onTap: onOpenLegal,
           ),
           _ActionTile(
             icon: Icons.logout_rounded,
-            title: 'Log out',
+            title: 'Çıkış yap',
             onTap: onLogout,
           ),
           _ActionTile(
@@ -161,14 +177,17 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: EnisColors.deepNavy.withOpacity(0.58),
+                    color: EnisColors.deepNavy.withValues(alpha: 0.58),
                   ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -205,10 +224,14 @@ class _ActionTile extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: color),
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: color.withOpacity(0.6)),
+            Icon(Icons.chevron_right_rounded,
+                color: color.withValues(alpha: 0.6)),
           ],
         ),
       ),

@@ -35,9 +35,9 @@ class _JournalScreenState extends State<JournalScreen> {
       _entries.insert(
         0,
         [
-          if (thought.isNotEmpty) 'Thought: $thought',
-          if (feeling.isNotEmpty) 'Feeling: $feeling',
-          if (next.isNotEmpty) 'Small step: $next',
+          if (thought.isNotEmpty) 'Düşünce: $thought',
+          if (feeling.isNotEmpty) 'Duygu: $feeling',
+          if (next.isNotEmpty) 'Küçük adım: $next',
         ].join('\n'),
       );
       _thoughtController.clear();
@@ -50,7 +50,7 @@ class _JournalScreenState extends State<JournalScreen> {
   Widget build(BuildContext context) {
     return ScreenScaffold(
       title: 'Günlük',
-      subtitle: 'A light CBT-style journal for reflection.',
+      subtitle: 'Düşüncelerini fark etmek için hafif bir günlük alanı.',
       child: ListView(
         children: [
           SoftCard(
@@ -58,21 +58,23 @@ class _JournalScreenState extends State<JournalScreen> {
               children: [
                 TextField(
                   controller: _thoughtController,
-                  decoration: const InputDecoration(labelText: 'What happened?'),
+                  decoration: const InputDecoration(labelText: 'Ne oldu?'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _feelingController,
-                  decoration: const InputDecoration(labelText: 'What did it bring up?'),
+                  decoration:
+                      const InputDecoration(labelText: 'Sende ne hissettirdi?'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _nextStepController,
-                  decoration: const InputDecoration(labelText: 'One small helpful action'),
+                  decoration: const InputDecoration(
+                      labelText: 'Küçük bir iyi gelen adım'),
                 ),
                 const SizedBox(height: 16),
                 GradientButton(
-                  label: 'Save / Kaydet',
+                  label: 'Kaydet',
                   icon: Icons.check_rounded,
                   onPressed: _saveEntry,
                 ),
@@ -83,9 +85,9 @@ class _JournalScreenState extends State<JournalScreen> {
           if (_entries.isEmpty)
             SoftCard(
               child: Text(
-                'No entries yet.',
+                'Henüz kayıt yok.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: EnisColors.deepNavy.withOpacity(0.58),
+                      color: EnisColors.deepNavy.withValues(alpha: 0.58),
                     ),
               ),
             )
@@ -93,7 +95,9 @@ class _JournalScreenState extends State<JournalScreen> {
             ..._entries.map(
               (entry) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: SoftCard(child: Text(entry, style: Theme.of(context).textTheme.bodyMedium)),
+                child: SoftCard(
+                    child: Text(entry,
+                        style: Theme.of(context).textTheme.bodyMedium)),
               ),
             ),
         ],

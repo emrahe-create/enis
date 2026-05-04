@@ -4,7 +4,8 @@ import '../../../core/network/api_client.dart';
 import '../../profile/domain/user_profile.dart';
 
 class AuthResult {
-  const AuthResult({required this.user, required this.token, this.usedMock = false});
+  const AuthResult(
+      {required this.user, required this.token, this.usedMock = false});
 
   final UserProfile user;
   final String token;
@@ -12,7 +13,8 @@ class AuthResult {
 }
 
 class AuthService {
-  AuthService({required ApiClient apiClient, required TokenStorage tokenStorage})
+  AuthService(
+      {required ApiClient apiClient, required TokenStorage tokenStorage})
       : _apiClient = apiClient,
         _tokenStorage = tokenStorage;
 
@@ -33,19 +35,37 @@ class AuthService {
           'email': email,
           'password': password,
           if (fullName?.trim().isNotEmpty == true) 'fullName': fullName!.trim(),
-          if (avatarName?.trim().isNotEmpty == true) 'avatarName': avatarName!.trim(),
+          if (avatarName?.trim().isNotEmpty == true)
+            'avatarName': avatarName!.trim(),
           'consents': consents,
           'marketingConsent': consents['marketing_permission'] == true,
         },
       );
-      return _storeAuth(json);
+      return _storeAuth(json, persistToken: false);
     } on ApiException catch (error) {
       if (!error.isNetworkFailure || !AppConfig.allowMockFallback) rethrow;
-      return _mockAuth(email: email, fullName: fullName, avatarName: avatarName);
+      return _mockAuth(
+        email: email,
+        fullName: fullName,
+        avatarName: avatarName,
+        persistToken: false,
+      );
     }
   }
 
-  Future<AuthResult> login({required String email, required String password}) async {
+  Future<void> resendVerificationEmail({required String email}) async {
+    try {
+      await _apiClient.postJson(
+        '/api/auth/resend-verification',
+        body: {'email': email},
+      );
+    } on ApiException catch (error) {
+      if (!error.isNetworkFailure || !AppConfig.allowMockFallback) rethrow;
+    }
+  }
+
+  Future<AuthResult> login(
+      {required String email, required String password}) async {
     try {
       final json = await _apiClient.postJson(
         '/api/auth/login',
@@ -62,11 +82,16 @@ class AuthService {
     return _tokenStorage.clear();
   }
 
-  Future<AuthResult> _storeAuth(Map<String, dynamic> json) async {
+  Future<AuthResult> _storeAuth(
+    Map<String, dynamic> json, {
+    bool persistToken = true,
+  }) async {
     final token = json['token']?.toString() ?? '';
     final rawUser = json['user'];
-    final user = rawUser is Map<String, dynamic> ? UserProfile.fromJson(rawUser) : UserProfile(email: 'demo@enis.app');
-    if (token.isNotEmpty) await _tokenStorage.saveToken(token);
+    final user = rawUser is Map<String, dynamic>
+        ? UserProfile.fromJson(rawUser)
+        : const UserProfile(email: 'demo@enis.app');
+    if (persistToken && token.isNotEmpty) await _tokenStorage.saveToken(token);
     return AuthResult(user: user, token: token);
   }
 
@@ -74,9 +99,10 @@ class AuthService {
     required String email,
     String? fullName,
     String? avatarName,
+    bool persistToken = true,
   }) async {
     const token = 'mock-jwt-token';
-    await _tokenStorage.saveToken(token);
+    if (persistToken) await _tokenStorage.saveToken(token);
     return AuthResult(
       usedMock: true,
       token: token,
