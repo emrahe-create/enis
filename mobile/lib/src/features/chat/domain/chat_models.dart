@@ -9,6 +9,7 @@ class ChatMessage {
     this.tone,
     this.memoryUsed = false,
     this.avatarNameUsed = false,
+    this.responseSource = 'openai',
   });
 
   final String text;
@@ -18,8 +19,10 @@ class ChatMessage {
   final String? tone;
   final bool memoryUsed;
   final bool avatarNameUsed;
+  final String responseSource;
 
   bool get fromUser => author == MessageAuthor.user;
+  bool get isFallback => responseSource == 'fallback';
 }
 
 class ChatResponse {
@@ -29,6 +32,7 @@ class ChatResponse {
     required this.suggestion,
     required this.memoryUsed,
     required this.avatarNameUsed,
+    this.responseSource = 'openai',
     this.premiumUpsell,
     this.sessionId,
   });
@@ -38,6 +42,7 @@ class ChatResponse {
   final String suggestion;
   final bool memoryUsed;
   final bool avatarNameUsed;
+  final String responseSource;
   final String? premiumUpsell;
   final String? sessionId;
 
@@ -47,12 +52,14 @@ class ChatResponse {
     final data = response is Map<String, dynamic> ? response : json;
 
     return ChatResponse(
-      response: data['response']?.toString() ?? 'Bunu duydum. Biraz daha anlatmak ister misin?',
+      response: data['response']?.toString() ??
+          'Bunu duydum. Biraz daha anlatmak ister misin?',
       tone: data['tone']?.toString() ?? 'supportive',
       suggestion: data['suggestion']?.toString() ?? '',
       memoryUsed: data['memoryUsed'] == true,
       premiumUpsell: data['premiumUpsell']?.toString(),
       avatarNameUsed: data['avatarNameUsed'] == true,
+      responseSource: data['responseSource']?.toString() ?? 'openai',
       sessionId: data['sessionId']?.toString() ??
           (chat is Map<String, dynamic> ? chat['sessionId']?.toString() : null),
     );

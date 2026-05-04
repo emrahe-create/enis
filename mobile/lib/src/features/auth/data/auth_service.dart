@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../core/storage/token_storage.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
@@ -41,14 +43,13 @@ class AuthService {
           'marketingConsent': consents['marketing_permission'] == true,
         },
       );
-      return _storeAuth(json, persistToken: false);
+      return _storeAuth(json);
     } on ApiException catch (error) {
       if (!error.isNetworkFailure || !AppConfig.allowMockFallback) rethrow;
       return _mockAuth(
         email: email,
         fullName: fullName,
         avatarName: avatarName,
-        persistToken: false,
       );
     }
   }
@@ -91,7 +92,15 @@ class AuthService {
     final user = rawUser is Map<String, dynamic>
         ? UserProfile.fromJson(rawUser)
         : const UserProfile(email: 'demo@enis.app');
-    if (persistToken && token.isNotEmpty) await _tokenStorage.saveToken(token);
+    if (persistToken && token.isNotEmpty) {
+      await _tokenStorage.saveToken(token);
+    }
+    if (kDebugMode) {
+      final savedToken = token.isEmpty ? null : await _tokenStorage.readToken();
+      debugPrint(
+        'AUTH_TOKEN_SAVED tokenExists=${savedToken?.isNotEmpty == true}',
+      );
+    }
     return AuthResult(user: user, token: token);
   }
 

@@ -13,6 +13,7 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   http: ^1.2.2
   permission_handler: ^11.3.1
+  shared_preferences: ^2.3.2
   speech_to_text: ^7.3.0
 
 dev_dependencies:
@@ -25,3 +26,4 @@ flutter:
   assets:
     - assets/brand/app_icon.png
     - assets/brand/logo_enis.png
+    - assets/avatars/

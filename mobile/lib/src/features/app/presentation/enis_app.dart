@@ -12,6 +12,7 @@ import '../../avatar/domain/avatar_character.dart';
 import '../../avatar/presentation/avatar_setup_screen.dart';
 import '../../checkin/data/checkin_service.dart';
 import '../../checkin/domain/retention_copy.dart';
+import '../../chat/data/chat_service.dart';
 import '../../chat/domain/chat_models.dart';
 import '../../legal/presentation/legal_screen.dart';
 import '../../premium/presentation/premium_screen.dart';
@@ -78,6 +79,7 @@ class _EnisRootState extends State<EnisRoot> {
     super.initState();
     _bootstrap();
     if (kDebugMode) {
+      debugPrint('API_BASE_URL=${widget.services.apiClient.baseUrl}');
       WidgetsBinding.instance.addPostFrameCallback((_) {
         unawaited(_checkApiHealth());
       });
@@ -291,6 +293,20 @@ class _EnisRootState extends State<EnisRoot> {
     final trimmed = text.trim();
     if (trimmed.isEmpty || _sending) return;
 
+    final token = await widget.services.tokenStorage.readToken();
+    if (kDebugMode) {
+      debugPrint(
+        'CHAT_API_URL ${widget.services.apiClient.baseUrl}/api/chat/message',
+      );
+      debugPrint('CHAT_TOKEN_EXISTS ${token?.isNotEmpty == true}');
+    }
+    if (token == null || token.isEmpty) {
+      if (!mounted) return;
+      setState(() => _stage = AppStage.login);
+      _showMessage('Oturumunu yenilemen gerekiyor.');
+      return;
+    }
+
     _silenceNudgeTimer?.cancel();
     _slowThinkingTimer?.cancel();
     unawaited(
@@ -323,14 +339,15 @@ class _EnisRootState extends State<EnisRoot> {
     });
 
     try {
-      final sessionId = _sessionId ?? await widget.services.chat.startSession();
       final response = await widget.services.chat.sendMessage(
         text: trimmed,
         avatar: _profile.preferredAvatar,
         premium: _subscription.premium,
-        sessionId: sessionId,
+        sessionId: _sessionId,
+        avatarCharacterId: _profile.avatarCharacterId,
       );
       if (!mounted) return;
+      final usedFallback = response.responseSource == 'fallback';
       setState(() {
         _messages.removeWhere(
           (message) =>
@@ -338,23 +355,45 @@ class _EnisRootState extends State<EnisRoot> {
               message.tone == 'thinking' &&
               message.text == chatSlowThinkingMessage,
         );
-        _sessionId = response.sessionId ?? sessionId;
-        _messages.add(
-          ChatMessage(
-            text: response.response,
-            author: MessageAuthor.enis,
-            suggestion:
-                response.suggestion.isEmpty ? null : response.suggestion,
-            premiumUpsell: response.premiumUpsell,
-            tone: response.tone,
-            memoryUsed: response.memoryUsed,
-            avatarNameUsed: response.avatarNameUsed,
-          ),
-        );
+        _sessionId = response.sessionId ?? _sessionId;
+        if (usedFallback) {
+          _replaceConnectionFallbackMessage();
+        } else {
+          _messages.add(
+            ChatMessage(
+              text: response.response,
+              author: MessageAuthor.enis,
+              suggestion:
+                  response.suggestion.isEmpty ? null : response.suggestion,
+              premiumUpsell: response.premiumUpsell,
+              tone: response.tone,
+              memoryUsed: response.memoryUsed,
+              avatarNameUsed: response.avatarNameUsed,
+              responseSource: response.responseSource,
+            ),
+          );
+        }
       });
-      _scheduleSilenceNudge();
+      if (!usedFallback) _scheduleSilenceNudge();
     } catch (error) {
       if (!mounted) return;
+      if (error is ApiException && error.statusCode == 401) {
+        await widget.services.auth.logout();
+        await widget.services.retentionStorage.clear();
+        if (!mounted) return;
+        setState(() {
+          _sending = false;
+          _messages.removeWhere(
+            (message) =>
+                message.author == MessageAuthor.enis &&
+                message.tone == 'thinking' &&
+                message.text == chatSlowThinkingMessage,
+          );
+          _stage = AppStage.login;
+        });
+        _showMessage('Oturumunu yenilemen gerekiyor.');
+        return;
+      }
       setState(() {
         _messages.removeWhere(
           (message) =>
@@ -362,12 +401,26 @@ class _EnisRootState extends State<EnisRoot> {
               message.tone == 'thinking' &&
               message.text == chatSlowThinkingMessage,
         );
+        _replaceConnectionFallbackMessage();
       });
-      _showMessage(error.toString());
     } finally {
       _slowThinkingTimer?.cancel();
       if (mounted) setState(() => _sending = false);
     }
+  }
+
+  void _replaceConnectionFallbackMessage() {
+    _messages.removeWhere(
+      (message) => !message.fromUser && message.isFallback,
+    );
+    _messages.add(
+      const ChatMessage(
+        text: chatConnectionUnavailableMessage,
+        author: MessageAuthor.enis,
+        tone: 'connection-error',
+        responseSource: 'fallback',
+      ),
+    );
   }
 
   void _scheduleSilenceNudge() {

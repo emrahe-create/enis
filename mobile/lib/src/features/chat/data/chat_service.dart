@@ -3,7 +3,8 @@ import '../../../core/network/api_client.dart';
 import '../domain/chat_models.dart';
 
 const chatFallbackUnavailableMessage =
-    'Şu anda yanıt üretirken zorlandım… birazdan tekrar deneyelim mi?';
+    'Şu anda bağlantıda zorlandım. Birazdan tekrar deneyelim mi?';
+const chatConnectionUnavailableMessage = chatFallbackUnavailableMessage;
 
 class ChatService {
   ChatService({required ApiClient apiClient}) : _apiClient = apiClient;
@@ -32,19 +33,26 @@ class ChatService {
     required String avatar,
     required bool premium,
     String? sessionId,
+    String? avatarCharacterId,
   }) async {
     try {
+      _apiClient.logDebug(
+        'CHAT_REQUEST_URL ${_apiClient.baseUrl}/api/chat/message',
+      );
       final json = await _apiClient.postJson(
         '/api/chat/message',
         body: {
           'text': text,
           'avatar': avatar,
+          if (avatarCharacterId?.isNotEmpty == true)
+            'avatarCharacterId': avatarCharacterId,
           if (sessionId != null) 'sessionId': sessionId,
         },
       );
       return ChatResponse.fromJson(json);
     } on ApiException catch (error) {
-      if (!error.isNetworkFailure || !AppConfig.allowMockFallback) rethrow;
+      if (!AppConfig.allowMockFallback) rethrow;
+      if (!error.isNetworkFailure) rethrow;
       return _fallbackResponse(text: text, avatar: avatar, premium: premium);
     }
   }
@@ -68,13 +76,14 @@ class ChatService {
         memoryUsed: false,
         avatarNameUsed: false,
         premiumUpsell: null,
+        responseSource: 'safety',
       );
     }
 
     final guide = avatar == 'guide';
 
     return ChatResponse(
-      response: chatFallbackUnavailableMessage,
+      response: chatConnectionUnavailableMessage,
       tone: guide
           ? 'sakin'
           : avatar == 'structured'
@@ -84,6 +93,7 @@ class ChatService {
       memoryUsed: false,
       avatarNameUsed: false,
       premiumUpsell: null,
+      responseSource: 'fallback',
     );
   }
 }

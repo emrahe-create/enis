@@ -26,6 +26,7 @@ class ApiClient {
         _httpClient = httpClient ?? http.Client();
 
   static const _definedBaseUrl = String.fromEnvironment('API_BASE_URL');
+  static const productionBaseUrl = 'https://api.enisapp.com';
 
   final String baseUrl;
   final TokenStorage tokenStorage;
@@ -42,11 +43,7 @@ class ApiClient {
       return _stripTrailingSlash(defined);
     }
 
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:4000';
-    }
-
-    return 'http://localhost:4000';
+    return productionBaseUrl;
   }
 
   static String _stripTrailingSlash(String value) {
@@ -77,18 +74,35 @@ class ApiClient {
     Map<String, dynamic>? body,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
+    _log('API_REQUEST $method $uri');
     final token = await tokenStorage.readToken();
+    final tokenExists = token != null && token.isNotEmpty;
+    final isChatMessage = path == '/api/chat/message';
+    if (isChatMessage) {
+      _log('CHAT_API_URL $uri');
+      _log('CHAT_TOKEN_EXISTS $tokenExists');
+    }
     final headers = <String, String>{
       'Accept': 'application/json',
       if (body != null) 'Content-Type': 'application/json',
-      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      if (tokenExists) 'Authorization': 'Bearer $token',
     };
 
     late http.Response response;
     try {
       response = await _request(method, uri, headers, body);
-    } catch (_) {
+    } catch (error) {
+      _log('API_NETWORK_ERROR $method $uri $error');
       throw const ApiException('API kullanılamıyor');
+    }
+
+    _log('API_RESPONSE $method $uri statusCode=${response.statusCode}');
+    if (isChatMessage) {
+      _log('CHAT_RESPONSE_STATUS ${response.statusCode}');
+      _log('CHAT_RESPONSE_BODY ${response.body}');
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      _log('API_ERROR_BODY $method $uri ${response.body}');
     }
 
     final decoded = _decodeBody(response.body);
@@ -127,8 +141,18 @@ class ApiClient {
 
   Map<String, dynamic> _decodeBody(String body) {
     if (body.isEmpty) return <String, dynamic>{};
-    final decoded = jsonDecode(body);
-    if (decoded is Map<String, dynamic>) return decoded;
-    return {'data': decoded};
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) return decoded;
+      return {'data': decoded};
+    } catch (_) {
+      return {'raw': body};
+    }
   }
+
+  void _log(String message) {
+    if (kDebugMode) debugPrint(message);
+  }
+
+  void logDebug(String message) => _log(message);
 }

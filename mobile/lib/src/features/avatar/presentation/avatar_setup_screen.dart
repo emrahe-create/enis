@@ -135,7 +135,7 @@ class _PremiumCharacterSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Karakter seçenekleri',
+          Text('Karakterini seç',
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 6),
           Text(
@@ -215,10 +215,10 @@ class _PremiumCharacterCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 58,
-              height: 58,
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(24),
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -227,8 +227,28 @@ class _PremiumCharacterCard extends StatelessWidget {
                     EnisColors.softPurple.withValues(alpha: 0.78),
                   ],
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.18),
+                    blurRadius: 18,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
-              child: Icon(character.icon, color: EnisColors.white, size: 30),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _SetupAvatarFallback(character: character),
+                  if (!const {'deniz', 'eren', 'arda', 'kerem'}
+                      .contains(character.id))
+                    Image.asset(
+                      character.assetIdle,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                ],
+              ),
             ),
             const SizedBox(height: 10),
             Text(
@@ -244,7 +264,7 @@ class _PremiumCharacterCard extends StatelessWidget {
             const SizedBox(height: 5),
             Expanded(
               child: Text(
-                character.description,
+                '${character.shortDescription} ${character.personalityStyle}.',
                 textAlign: TextAlign.center,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
@@ -273,6 +293,126 @@ class _PremiumCharacterCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SetupAvatarFallback extends StatelessWidget {
+  const _SetupAvatarFallback({required this.character});
+
+  final PremiumAvatarCharacter character;
+
+  @override
+  Widget build(BuildContext context) {
+    final id = character.id;
+    final hairColor = switch (id) {
+      'mira' => const Color(0xFF442D5E),
+      'lina' => const Color(0xFFFFD56B),
+      'deniz' => const Color(0xFF6A4C9A),
+      'ada' => const Color(0xFF2F2754),
+      'eren' => const Color(0xFF695A82),
+      'arda' => const Color(0xFF29243D),
+      'kerem' => const Color(0xFF5D463D),
+      _ => EnisColors.deepNavy,
+    };
+    final faceColor = switch (id) {
+      'arda' => const Color(0xFFE4B896),
+      'kerem' => const Color(0xFFEBC09D),
+      'eren' => const Color(0xFFE9C4A7),
+      'deniz' => const Color(0xFFF1C9A8),
+      _ => const Color(0xFFF3C7A8),
+    };
+    final eyeColor = id == 'deniz'
+        ? EnisColors.primaryBlue
+        : EnisColors.deepNavy.withValues(alpha: 0.76);
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Positioned(
+          top: 12,
+          child: Container(
+            width: id == 'arda' ? 42 : 38,
+            height: id == 'kerem' ? 25 : 22,
+            decoration: BoxDecoration(
+              color: hairColor,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(22),
+                topRight: const Radius.circular(22),
+                bottomLeft: Radius.circular(id == 'lina' ? 18 : 8),
+                bottomRight: Radius.circular(id == 'kerem' ? 16 : 8),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 23,
+          child: Container(
+            width: id == 'arda' ? 34 : 31,
+            height: 35,
+            decoration: BoxDecoration(
+              color: faceColor,
+              borderRadius: BorderRadius.circular(id == 'arda' ? 12 : 16),
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned(
+                  top: 13,
+                  left: 8,
+                  child: _SetupEye(color: eyeColor),
+                ),
+                Positioned(
+                  top: 13,
+                  right: 8,
+                  child: _SetupEye(color: eyeColor),
+                ),
+                Positioned(
+                  bottom: 8,
+                  child: Container(
+                    width: id == 'kerem' ? 8 : 11,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: EnisColors.deepNavy.withValues(alpha: 0.42),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (id == 'mira' || id == 'kerem')
+          ...List.generate(id == 'mira' ? 5 : 3, (index) {
+            return Positioned(
+              top: id == 'mira' ? 11 + (index.isEven ? 0 : 4) : 9,
+              left: id == 'mira' ? 17 + index * 7 : 25 + index * 6,
+              child: Container(
+                width: id == 'mira' ? 9 : 7,
+                height: id == 'mira' ? 9 : 13,
+                decoration: BoxDecoration(
+                  color: hairColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+}
+
+class _SetupEye extends StatelessWidget {
+  const _SetupEye({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 4,
+      height: 4,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }
