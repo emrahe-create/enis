@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { allowedCorsOrigins, corsOptions, createApp, isCorsOriginAllowed } from "../src/app.js";
+import { allowedCorsOrigins, corsOptions, createApp, isCorsOriginAllowed, optionsPreflightBypass } from "../src/app.js";
 
 test("GET /health returns service status", async () => {
   const app = createApp();
@@ -79,14 +79,49 @@ test("CORS callback allows Flutter web localhost and logs blocked origins", asyn
 
 test("global OPTIONS route is registered before API routers", () => {
   const app = createApp();
-  const optionsIndex = app._router.stack.findIndex(
+  const optionsMiddlewareIndex = app._router.stack.findIndex(
+    (item) => item.handle?.name === "optionsPreflightBypass"
+  );
+  const optionsRouteIndex = app._router.stack.findIndex(
     (item) => item.route?.path === "*" && item.route?.methods?.options
   );
   const authRouterIndex = app._router.stack.findIndex(
     (item) => String(item.regexp).includes("\\/api\\/auth")
   );
 
-  assert.ok(optionsIndex > -1);
+  assert.ok(optionsMiddlewareIndex > -1);
+  assert.ok(optionsRouteIndex > -1);
   assert.ok(authRouterIndex > -1);
-  assert.ok(optionsIndex < authRouterIndex);
+  assert.ok(optionsRouteIndex < optionsMiddlewareIndex);
+  assert.ok(optionsMiddlewareIndex < authRouterIndex);
+  assert.ok(optionsRouteIndex < authRouterIndex);
+});
+
+test("OPTIONS /api/chat/message returns 204 before auth middleware", () => {
+  const req = {
+    method: "OPTIONS",
+    url: "/api/chat/message",
+    headers: { origin: "http://localhost:5173" }
+  };
+  const res = {
+    statusCode: null,
+    ended: false,
+    status(status) {
+      this.statusCode = status;
+      return this;
+    },
+    end() {
+      this.ended = true;
+      return this;
+    }
+  };
+  let nextCalled = false;
+
+  optionsPreflightBypass(req, res, () => {
+    nextCalled = true;
+  });
+
+  assert.equal(res.statusCode, 204);
+  assert.equal(res.ended, true);
+  assert.equal(nextCalled, false);
 });
