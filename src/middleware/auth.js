@@ -25,6 +25,3 @@ export function requireAuth(req, _res, next) {
     return next(new ApiError(401, "Invalid or expired token"));
   }
 }
-  if (req.method === "OPTIONS") {
-  return next();
-}

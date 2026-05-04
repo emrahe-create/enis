@@ -55,6 +55,18 @@ export function applyCorsMiddleware(app, options = corsOptions) {
   app.options("*", cors(options));
 }
 
+export function optionsPreflightBypass(req, res, next) {
+  if (req.method === "OPTIONS") {
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.header("Access-Control-Allow-Credentials", "true");
+    return res.sendStatus(204);
+  }
+
+  return next();
+}
+
 function requestIdMiddleware(req, res, next) {
   const requestId = req.get("x-request-id") || randomUUID();
   req.requestId = requestId;
@@ -72,6 +84,7 @@ export function createApp({ configureBeforeRoutes } = {}) {
 
   app.use(requestIdMiddleware);
   app.use(helmet());
+  app.use(optionsPreflightBypass);
   if (configureBeforeRoutes) {
     configureBeforeRoutes(app);
   } else {
