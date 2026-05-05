@@ -7,10 +7,12 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:ai_wellness_mobile/src/core/brand/enis_brand.dart';
 import 'package:ai_wellness_mobile/src/core/network/api_client.dart';
 import 'package:ai_wellness_mobile/src/core/storage/token_storage.dart';
 import 'package:ai_wellness_mobile/src/core/widgets/gradient_button.dart';
 import 'package:ai_wellness_mobile/src/features/app/presentation/enis_app.dart';
+import 'package:ai_wellness_mobile/src/features/auth/data/auth_service.dart';
 import 'package:ai_wellness_mobile/src/features/auth/presentation/register_screen.dart';
 import 'package:ai_wellness_mobile/src/features/avatar/domain/avatar_character.dart';
 import 'package:ai_wellness_mobile/src/features/avatar/presentation/avatar_setup_screen.dart';
@@ -83,6 +85,35 @@ void main() {
   test('password confirmation mismatch blocks register validation', () {
     expect(registerPasswordsMatch('secret123', 'secret123'), true);
     expect(registerPasswordsMatch('secret123', 'other123'), false);
+  });
+
+  test('register saves token and uses non-blocking MVP confirmation copy',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = TokenStorage(preferences: SharedPreferences.getInstance());
+    final authService = _MvpRegisterAuthService(storage: storage);
+    final registered = await authService.register(
+      email: 'demo@enis.app',
+      password: 'secret123',
+      fullName: 'Demo User',
+      avatarName: 'Enis',
+      consents: const {
+        ConsentKeys.kvkkClarificationSeen: true,
+        ConsentKeys.privacyPolicy: true,
+        ConsentKeys.termsOfUse: true,
+        ConsentKeys.wellnessDisclaimer: true,
+      },
+    );
+
+    expect(await storage.readToken(), 'mvp-register-token');
+    expect(registered.token, 'mvp-register-token');
+    expect(registered.user.email, 'demo@enis.app');
+    expect(
+      emailVerificationRequiredMessage,
+      'Hesabın oluşturuldu. Enis’e başlayabilirsin.',
+    );
+    expect(emailVerificationRequiredMessage.contains('doğrulaman gerekiyor'),
+        false);
   });
 
   test('mobile premium checkout is disabled for Turkey launch', () {
@@ -808,4 +839,38 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text(companionComfortingStatusLabel), findsOneWidget);
   });
+}
+
+class _MvpRegisterAuthService extends AuthService {
+  _MvpRegisterAuthService({required TokenStorage storage})
+      : _tokenStorage = storage,
+        super(
+          apiClient: ApiClient(
+            tokenStorage: storage,
+            httpClient: MockClient((_) async => http.Response('{}', 200)),
+          ),
+          tokenStorage: storage,
+        );
+
+  final TokenStorage _tokenStorage;
+
+  @override
+  Future<AuthResult> register({
+    required String email,
+    required String password,
+    String? fullName,
+    String? avatarName,
+    required Map<String, bool> consents,
+  }) async {
+    await _tokenStorage.saveToken('mvp-register-token');
+    return AuthResult(
+      user: UserProfile(
+        id: 'user-1',
+        email: email,
+        fullName: fullName,
+        avatarName: avatarName,
+      ),
+      token: 'mvp-register-token',
+    );
+  }
 }

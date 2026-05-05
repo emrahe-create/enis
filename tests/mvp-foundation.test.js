@@ -183,6 +183,7 @@ test("account placeholder endpoints exist", () => {
   assert.equal(routeExists(authRouter, "post", "/email-verification"), true);
   assert.equal(routeExists(authRouter, "post", "/resend-verification"), true);
   assert.equal(routeExists(authRouter, "get", "/verify-email"), true);
+  assert.equal(verificationStatus({ sent: false, skipped: true }), 200);
   assert.equal(verificationStatus({ sent: false }), 503);
   assert.equal(verificationStatus({ sent: true }), 202);
 });

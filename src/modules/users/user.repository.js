@@ -92,7 +92,9 @@ export async function createUser({
   avatarVisualStyle,
   avatarPersonalityStyle,
   notificationConsent = false,
-  marketingConsent = false
+  marketingConsent = false,
+  // TODO: Re-enable email verification before public production launch.
+  emailVerified = true
 }) {
   const result = await query(
     `INSERT INTO users (
@@ -115,9 +117,11 @@ export async function createUser({
        avatar_visual_style,
        avatar_personality_style,
        notification_consent,
-       marketing_consent
+       marketing_consent,
+       email_verified,
+       email_verified_at
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, CASE WHEN $21 THEN NOW() ELSE NULL END)
      RETURNING ${publicUserColumns}`,
     [
       email.toLowerCase(),
@@ -139,7 +143,8 @@ export async function createUser({
       avatarVisualStyle || null,
       avatarPersonalityStyle || null,
       Boolean(notificationConsent),
-      Boolean(marketingConsent)
+      Boolean(marketingConsent),
+      Boolean(emailVerified)
     ]
   );
   return result.rows[0];

@@ -38,6 +38,7 @@ const registerProfileSchema = {
 };
 
 export function verificationStatus(result) {
+  if (result?.skipped) return 200;
   return result?.sent === false ? 503 : 202;
 }
 
@@ -92,7 +93,7 @@ authRouter.post(
 
 authRouter.get(
   "/verify-email",
-  validate(z.object({ token: z.string().min(20).max(256) }), "query"),
+  validate(z.object({ token: z.string().min(1).max(256).optional() }), "query"),
   asyncHandler(async (req, res) => {
     res.json(await verifyEmailToken(req.query));
   })

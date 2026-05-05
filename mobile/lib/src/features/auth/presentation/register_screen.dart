@@ -10,7 +10,7 @@ import '../data/auth_service.dart';
 import 'auth_layout.dart';
 
 const emailVerificationRequiredMessage =
-    'E-posta adresini doğrulaman gerekiyor. Gelen kutunu kontrol et.';
+    'Hesabın oluşturuldu. Enis’e başlayabilirsin.';
 const resendVerificationButtonLabel = 'Doğrulama e-postasını tekrar gönder';
 
 bool registerPasswordsMatch(String password, String confirmation) {
@@ -47,8 +47,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _disclaimer = false;
   bool _marketing = false;
   bool _loading = false;
-  bool _resendingVerification = false;
-  String? _registeredEmail;
 
   bool get _requiredConsentsAccepted =>
       _kvkk && _privacy && _terms && _disclaimer;
@@ -92,27 +90,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         },
       );
       if (!mounted) return;
-      setState(() => _registeredEmail = result.user.email);
+      // TODO: Re-enable email verification before public production launch.
+      _showMessage(emailVerificationRequiredMessage);
+      widget.onRegistered(result);
     } on ApiException catch (error) {
       _showMessage(error.message);
     } finally {
       if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _resendVerification() async {
-    final email = _registeredEmail ?? _emailController.text.trim();
-    if (email.isEmpty) return;
-
-    setState(() => _resendingVerification = true);
-    try {
-      await widget.authService.resendVerificationEmail(email: email);
-      if (!mounted) return;
-      _showMessage('Doğrulama e-postası tekrar gönderildi.');
-    } on ApiException catch (error) {
-      _showMessage(error.message);
-    } finally {
-      if (mounted) setState(() => _resendingVerification = false);
     }
   }
 
@@ -138,53 +122,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_registeredEmail != null) {
-      return AuthLayout(
-        title: 'E-posta doğrulama',
-        subtitle: 'Hesabını güvenle kullanabilmen için bu adım gerekli.',
-        child: Column(
-          children: [
-            SoftCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.mark_email_unread_outlined,
-                    color: EnisColors.primaryBlue,
-                    size: 34,
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    emailVerificationRequiredMessage,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _registeredEmail!,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            GradientButton(
-              label: _resendingVerification
-                  ? 'Gönderiliyor...'
-                  : resendVerificationButtonLabel,
-              icon: Icons.refresh_rounded,
-              enabled: !_resendingVerification,
-              onPressed: _resendVerification,
-            ),
-            const SizedBox(height: 10),
-            TextButton(
-              onPressed: widget.onLoginRequested,
-              child: const Text('Geri dön'),
-            ),
-          ],
-        ),
-      );
-    }
-
     return AuthLayout(
       title: 'Hesap oluştur',
       subtitle: 'Enis, duygusal destek ve iyi oluş amacıyla geliştirilmiştir.',

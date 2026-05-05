@@ -19,6 +19,20 @@ import {
   sendVerificationEmail
 } from "./email.service.js";
 
+// TODO: Re-enable email verification before public production launch.
+export const mvpEmailVerificationDisabled = true;
+export const mvpEmailVerificationSkippedMessage =
+  "MVP aşamasında e-posta doğrulaması geçici olarak devre dışı.";
+
+export function buildMvpEmailVerificationSkippedResponse(email) {
+  return {
+    sent: false,
+    skipped: true,
+    email,
+    message: mvpEmailVerificationSkippedMessage
+  };
+}
+
 export function generateVerificationToken() {
   return crypto.randomBytes(32).toString("hex");
 }
@@ -78,15 +92,23 @@ export async function registerUser(
     marketingConsent,
     consents
   },
-  { ipAddress = null, userAgent = null } = {}
+  {
+    ipAddress = null,
+    userAgent = null,
+    findByEmailFn = findUserByEmail,
+    createUserFn = createUser,
+    ensureFreeSubscriptionFn = ensureFreeSubscription,
+    storeConsentRecordsFn = storeConsentRecords,
+    createVerification = createEmailVerificationForUser
+  } = {}
 ) {
   const consentRecords = buildSignupConsentRecords(consents);
-  const existing = await findUserByEmail(email);
+  const existing = await findByEmailFn(email);
   if (existing) throw new ApiError(409, "Email is already registered");
 
   const passwordHash = await bcrypt.hash(password, 12);
   const marketingPermission = consentRecords.some((record) => record.consentType === "marketing_permission");
-  const user = await createUser({
+  const user = await createUserFn({
     email,
     passwordHash,
     displayName,
@@ -106,20 +128,30 @@ export async function registerUser(
     avatarVisualStyle,
     avatarPersonalityStyle,
     notificationConsent,
-    marketingConsent: Boolean(marketingConsent || marketingPermission)
+    marketingConsent: Boolean(marketingConsent || marketingPermission),
+    emailVerified: true
   });
-  await ensureFreeSubscription(user.id);
-  await storeConsentRecords({ userId: user.id, records: consentRecords, ipAddress, userAgent });
-  const emailVerification = await createEmailVerificationForUser(user);
+  await ensureFreeSubscriptionFn(user.id);
+  await storeConsentRecordsFn({ userId: user.id, records: consentRecords, ipAddress, userAgent });
+  // TODO: Re-enable email verification before public production launch.
+  const emailVerification = mvpEmailVerificationDisabled
+    ? buildMvpEmailVerificationSkippedResponse(user.email)
+    : await createVerification(user);
 
   return { user, token: signToken(user), emailVerification };
 }
 
-export async function loginUser({ email, password }) {
-  const user = await findUserByEmail(email);
+export async function loginUser(
+  { email, password },
+  {
+    findByEmailFn = findUserByEmail,
+    comparePassword = bcrypt.compare
+  } = {}
+) {
+  const user = await findByEmailFn(email);
   if (!user) throw new ApiError(401, "Invalid email or password");
 
-  const matches = await bcrypt.compare(password, user.password_hash);
+  const matches = await comparePassword(password, user.password_hash);
   if (!matches) throw new ApiError(401, "Invalid email or password");
 
   return {
@@ -179,6 +211,11 @@ export async function resendVerificationEmail(
   } = {}
 ) {
   const user = await findByEmail(email);
+  // TODO: Re-enable email verification before public production launch.
+  if (mvpEmailVerificationDisabled) {
+    return buildMvpEmailVerificationSkippedResponse(user?.email || email);
+  }
+
   if (!user) {
     return {
       sent: false,
@@ -205,9 +242,13 @@ export async function verifyEmailToken(
     markVerified = markEmailVerifiedByTokenHash
   } = {}
 ) {
+  if (!token) {
+    throw new ApiError(400, "Doğrulama bağlantısı geçersiz veya eksik.");
+  }
+
   const tokenHash = hashVerificationToken(token);
   const existing = await findByTokenHash(tokenHash);
-  if (!existing) throw new ApiError(400, "Geçersiz veya süresi dolmuş doğrulama bağlantısı.");
+  if (!existing) throw new ApiError(400, "Doğrulama bağlantısı geçersiz veya süresi dolmuş.");
 
   const user = await markVerified(tokenHash);
   return {
